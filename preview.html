@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="https://www.google.com/images/branding/product/ico/googleg_lodp.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowSync - 小组任务协同管理系统 (演示预览版)</title>
+  
+  <!-- 1. 引入谷歌字体 & Element Plus 样式库 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+
+  <!-- 2. 全局谷歌风格 Vanilla CSS 样式 -->
+  <style>
+    :root {
+      --google-blue: #1a73e8;
+      --google-blue-hover: #1557b0;
+      --google-blue-light: #e8f0fe;
+      
+      --google-red: #d93025;
+      --google-red-hover: #b02017;
+      --google-red-light: #fce8e6;
+      
+      --google-yellow: #f9ab00;
+      --google-yellow-hover: #d58f00;
+      --google-yellow-light: #fef7e0;
+      
+      --google-green: #1e8e3e;
+      --google-green-hover: #137333;
+      --google-green-light: #e6f4ea;
+
+      --text-primary: #202124;
+      --text-secondary: #5f6368;
+      --text-disabled: #9aa0a6;
+      
+      --bg-page: #f8f9fa;
+      --bg-card: #ffffff;
+      --border-color: #dadce0;
+      --border-hover: #bdc1c6;
+      
+      --font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      
+      --shadow-1: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+      --shadow-2: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+      --shadow-3: 0 4px 16px 0 rgba(60,64,67,0.15);
+      --transition-bezier: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* Element Plus 全局重写 */
+    .el-button {
+      font-family: var(--font-family);
+      font-weight: 500;
+      border-radius: 4px;
+      transition: var(--transition-bezier);
+    }
+    .el-button--primary {
+      background-color: var(--google-blue);
+      border-color: var(--google-blue);
+    }
+    .el-button--primary:hover {
+      background-color: var(--google-blue-hover) !important;
+      border-color: var(--google-blue-hover) !important;
+    }
+    .el-button--success {
+      background-color: var(--google-green);
+      border-color: var(--google-green);
+    }
+    .el-button--success:hover {
+      background-color: var(--google-green-hover) !important;
+      border-color: var(--google-green-hover) !important;
+    }
+    .el-card {
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      box-shadow: none;
+      transition: var(--transition-bezier);
+    }
+    .el-card:hover {
+      box-shadow: var(--shadow-1);
+    }
+    .el-menu-item.is-active {
+      background-color: var(--google-blue-light) !important;
+      color: var(--google-blue) !important;
+      font-weight: 600;
+    }
+
+    /* 登录/注册视窗结构 */
+    .auth-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--bg-page);
+      padding: 20px;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 40px 32px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    }
+    .brand {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      background-color: var(--google-blue);
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      margin: 0 auto 12px;
+      box-shadow: 0 2px 6px rgba(26,115,232,0.3);
+    }
+    .brand-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .brand-slogan {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .auth-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    /* 主界面布局 */
+    .home-container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+    .sidebar {
+      width: 260px;
+      background-color: var(--bg-card);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-brand {
+      height: 64px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .sidebar-brand .logo {
+      width: 32px;
+      height: 32px;
+      background-color: var(--google-blue);
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+    .sidebar-brand .title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--text-primary);
+    }
+    .user-profile {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #f1f3f4;
+    }
+    .user-profile .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--google-blue-light);
+      color: var(--google-blue);
+      font-weight: bold;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .user-profile .name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .role-tag {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+    .role-leader { background-color: var(--google-red-light); color: var(--google-red); }
+    .role-member { background-color: var(--google-green-light); color: var(--google-green); }
+    
+    .sidebar-menu {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px 12px 0;
+      border-right: none !important;
+      background: transparent !important;
+    }
+    .menu-group-title {
+      padding: 12px 24px 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-disabled);
+      font-weight: 600;
+    }
+    .sidebar-footer {
+      padding: 15px 20px;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .content-header {
+      height: 64px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .content-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* 总览统计 */
+    .stat-card {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+    }
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-right: 15px;
+    }
+    .icon-blue { background: var(--google-blue-light); color: var(--google-blue); }
+    .icon-green { background: var(--google-green-light); color: var(--google-green); }
+    .icon-yellow { background: var(--google-yellow-light); color: var(--google-yellow); }
+    .icon-red { background: var(--google-red-light); color: var(--google-red); }
+    .stat-data .num { font-size: 26px; font-weight: 600; font-family: 'Outfit'; }
+    .stat-data .label { font-size: 12px; color: var(--text-secondary); }
+
+    /* AI 拆解板 */
+    .ai-summary-box {
+      background-color: var(--google-blue-light);
+      border: 1px solid rgba(26,115,232,0.15);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .ai-summary-box h4 { color: var(--google-blue); margin-bottom: 5px; }
+    .ai-items-box {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    /* 抽屉建议 */
+    .suggestion-box {
+      background: #fafafa;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #f1f3f4;
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+    
+    .demo-accounts {
+      margin-top: 20px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 15px;
+      text-align: center;
+    }
+    .demo-accounts span {
+      cursor: pointer;
+      margin: 0 4px;
+      font-size: 12px;
+    }
+    .table-actions {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    .el-menu {
+      border-right: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    
+    <!-- ==================== 页面 1：登录界面 ==================== -->
+    <div v-if="currentPage === 'login'" class="auth-wrapper">
+      <div class="auth-card">
+        <div class="brand">
+          <div class="brand-logo">FS</div>
+          <h1 class="brand-name">FlowSync</h1>
+          <p class="brand-slogan">小组任务协同管理系统 (演示预览)</p>
+        </div>
+
+        <el-form :model="loginForm" :rules="loginRules" ref="loginFormRef" label-position="top">
+          <el-form-item label="账号" prop="username">
+            <el-input v-model="loginForm.username" placeholder="请输入用户名" prefix-icon="User" />
+          </el-form-item>
+          <el-form-item label="密码" prop="password">
+            <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" prefix-icon="Lock" show-password />
+          </el-form-item>
+
+          <div class="auth-actions">
+            <el-button type="primary" style="height: 40px;" @click="handleLogin">登录进入系统</el-button>
+            <el-button style="height: 40px;" @click="currentPage = 'register'">没有账号？点击注册</el-button>
+          </div>
+        </el-form>
+
+        <div class="demo-accounts">
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">点击快速填充内置测试账号 (密码 123456)：</p>
+          <el-tag size="small" type="info" class="mr-1" style="cursor:pointer" @click="fillLogin('leader')">负责人: leader</el-tag>
+          <el-tag size="small" type="info" class="mr-1" style="cursor:pointer" @click="fillLogin('member1')">成员: member1</el-tag>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 页面 2：注册界面 ==================== -->
+    <div v-if="currentPage === 'register'" class="auth-wrapper">
+      <div class="auth-card">
+        <div class="brand">
+          <div class="brand-logo">FS</div>
+          <h1 class="brand-name">注册新账号</h1>
+          <p class="brand-slogan">设置您的登录凭证与基本信息</p>
+        </div>
+
+        <el-form :model="registerForm" :rules="registerRules" ref="registerFormRef" label-position="top">
+          <el-form-item label="设置账号 (用户名)" prop="username">
+            <el-input v-model="registerForm.username" placeholder="建议使用拼音或英文" prefix-icon="User" />
+          </el-form-item>
+          <el-form-item label="真实姓名" prop="realName">
+            <el-input v-model="registerForm.realName" placeholder="例如：张三" prefix-icon="Checked" />
+          </el-form-item>
+          <el-form-item label="登录密码" prop="password">
+            <el-input v-model="registerForm.password" type="password" placeholder="请输入 6 位以上密码" prefix-icon="Lock" show-password />
+          </el-form-item>
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input v-model="registerForm.confirmPassword" type="password" placeholder="请再次输入密码" prefix-icon="Lock" show-password />
+          </el-form-item>
+          <el-form-item label="手机号" prop="phone">
+            <el-input v-model="registerForm.phone" placeholder="请输入手机号 (可选)" prefix-icon="Cellphone" />
+          </el-form-item>
+          <el-form-item label="选择系统角色" prop="role">
+            <el-select v-model="registerForm.role" style="width: 100%;">
+              <el-option label="普通成员 (执行者)" value="成员"></el-option>
+              <el-option label="项目负责人 (管理者)" value="负责人"></el-option>
+            </el-select>
+          </el-form-item>
+
+          <div class="auth-actions">
+            <el-button type="primary" style="height: 40px;" @click="handleRegister">注册账号</el-button>
+            <el-button style="height: 40px;" @click="currentPage = 'login'">返回登录</el-button>
+          </div>
+        </el-form>
+      </div>
+    </div>
+
+    <!-- ==================== 页面 3：主界面 (左侧分栏) ==================== -->
+    <div v-if="currentPage === 'home'" class="home-container">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-brand">
+          <div class="logo">FS</div>
+          <div class="title">FlowSync 工作台</div>
+        </div>
+
+        <div class="user-profile">
+          <div class="avatar">{{ currentUser.realName ? currentUser.realName.substring(0, 1) : 'U' }}</div>
+          <div class="info">
+            <div class="name">{{ currentUser.realName }}</div>
+            <span class="role-tag" :class="currentUser.role === '负责人' ? 'role-leader' : 'role-member'">
+              {{ currentUser.role }}
+            </span>
+          </div>
+        </div>
+
+        <el-menu :default-active="activeMenu" class="sidebar-menu" @select="handleMenuSelect">
+          <div class="menu-group-title">工作台</div>
+          <el-menu-item index="overview">
+            <el-icon><odometer /></el-icon>
+            <span>总览统计</span>
+          </el-menu-item>
+          
+          <div class="menu-group-title">业务管理</div>
+          <el-menu-item index="projects">
+            <el-icon><folder /></el-icon>
+            <span>项目管理</span>
+          </el-menu-item>
+          <!-- 权限控制：仅负责人可见 AI 拆解 -->
+          <el-menu-item index="ai-plan" v-if="currentUser.role === '负责人'">
+            <el-icon><cpu /></el-icon>
+            <span>AI 任务拆解</span>
+          </el-menu-item>
+          <el-menu-item index="tasks">
+            <el-icon><document /></el-icon>
+            <span>任务管理</span>
+          </el-menu-item>
+          <el-menu-item index="logs">
+            <el-icon><trend-charts /></el-icon>
+            <span>进度跟踪</span>
+          </el-menu-item>
+          <el-menu-item index="summaries">
+            <el-icon><notebook /></el-icon>
+            <span>总结中心</span>
+          </el-menu-item>
+
+          <div class="menu-group-title">系统配置</div>
+          <el-menu-item index="members">
+            <el-icon><user-filled /></el-icon>
+            <span>成员列表</span>
+          </el-menu-item>
+          <el-menu-item index="profile">
+            <el-icon><avatar /></el-icon>
+            <span>个人信息</span>
+          </el-menu-item>
+        </el-menu>
+
+        <div class="sidebar-footer">
+          <el-button type="danger" plain style="width: 100%;" @click="handleLogout">退出登录</el-button>
+        </div>
+      </div>
+
+      <!-- Main Area -->
+      <div class="main-content">
+        <div class="content-header">
+          <h2 style="font-size:18px; font-weight:500;">{{ menuTitles[activeMenu] }}</h2>
+          <el-tag type="success" size="small">预览环境状态: 正常</el-tag>
+        </div>
+
+        <div class="content-body">
+          
+          <!-- 3.1 工作台总览 -->
+          <div v-if="activeMenu === 'overview'">
+            <el-row :gutter="20">
+              <el-col :span="6">
+                <el-card class="stat-card" shadow="hover">
+                  <div class="stat-icon icon-blue"><i class="el-icon-user">👥</i></div>
+                  <div class="stat-data">
+                    <div class="num">{{ stats.userCount }}</div>
+                    <div class="label">系统成员</div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card" shadow="hover">
+                  <div class="stat-icon icon-green">📁</div>
+                  <div class="stat-data">
+                    <div class="num">{{ stats.projectCount }}</div>
+                    <div class="label">项目总数</div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card" shadow="hover">
+                  <div class="stat-icon icon-yellow">📝</div>
+                  <div class="stat-data">
+                    <div class="num">{{ stats.taskCount }}</div>
+                    <div class="label">当前任务</div>
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :span="6">
+                <el-card class="stat-card" shadow="hover">
+                  <div class="stat-icon icon-red">🎓</div>
+                  <div class="stat-data">
+                    <div class="num">{{ stats.summaryCount }}</div>
+                    <div class="label">总结报告</div>
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="20" style="margin-top:24px;">
+              <el-col :span="16">
+                <el-card>
+                  <template #header><div style="font-weight:600">我负责的进行中任务</div></template>
+                  <el-table :data="myTasks" style="width:100%" empty-text="您目前没有进行中的负责任务">
+                    <el-table-column prop="title" label="任务标题"></el-table-column>
+                    <el-table-column prop="projectName" label="项目" width="150"></el-table-column>
+                    <el-table-column prop="priority" label="优先级" width="90">
+                      <template #default="s">
+                        <el-tag :type="s.row.priority==='高'?'danger':(s.row.priority==='中'?'warning':'info')" size="small">{{s.row.priority}}</el-tag>
+                      </template>
+                    </el-table-column>
+                    <el-table-column prop="due_date" label="截止日期" width="120"></el-table-column>
+                    <el-table-column label="操作" width="90">
+                      <template #default="s">
+                        <el-button type="primary" link @click="openFeedback(s.row.id)">更新进度</el-button>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                </el-card>
+              </el-col>
+
+              <el-col :span="8">
+                <el-card>
+                  <template #header><div style="font-weight:600">快速导航入口</div></template>
+                  <div style="display:flex; flex-direction:column; gap:12px;">
+                    <el-button v-if="currentUser.role === '负责人'" type="primary" @click="openAddProject">新建项目</el-button>
+                    <el-button v-if="currentUser.role === '负责人'" type="success" @click="activeMenu='ai-plan'">AI 智能任务拆解</el-button>
+                    <el-button type="warning" @click="openFeedback(null)">添加工作进度反馈</el-button>
+                    <el-button type="info" @click="openAddSummary">撰写阶段总结</el-button>
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
+          </div>
+
+          <!-- 3.2 项目管理 -->
+          <div v-if="activeMenu === 'projects'">
+            <div class="table-actions">
+              <el-button v-if="currentUser.role==='负责人'" type="primary" @click="openAddProject">新建项目</el-button>
+            </div>
+            <el-table :data="projects" style="width: 100%">
+              <el-table-column prop="id" label="ID" width="60"></el-table-column>
+              <el-table-column prop="name" label="项目名称" width="180"></el-table-column>
+              <el-table-column prop="description" label="项目描述" show-overflow-tooltip></el-table-column>
+              <el-table-column prop="status" label="项目状态" width="100">
+                <template #default="s">
+                  <el-tag :type="s.row.status==='已完成'?'success':(s.row.status==='进行中'?'primary':'info')" size="small">{{s.row.status}}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="priority" label="优先级" width="90">
+                <template #default="s">
+                  <el-tag :type="s.row.priority==='高'?'danger':(s.row.priority==='中'?'warning':'info')" size="small">{{s.row.priority}}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="ownerName" label="负责人" width="100"></el-table-column>
+              <el-table-column label="操作" width="140" v-if="currentUser.role==='负责人'">
+                <template #default="s">
+                  <el-button type="primary" link @click="openEditProject(s.row)">编辑</el-button>
+                  <el-button type="danger" link @click="deleteProject(s.row.id)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- 3.3 AI 任务拆解 -->
+          <div v-if="activeMenu === 'ai-plan' && currentUser.role === '负责人'">
+            <el-row :gutter="20">
+              <el-col :span="8">
+                <el-card>
+                  <template #header><div style="font-weight:600">大模型任务规划拆解</div></template>
+                  <el-form label-position="top">
+                    <el-form-item label="对应项目">
+                      <el-select v-model="aiForm.projectId" style="width: 100%;">
+                        <el-option v-for="p in projects" :key="p.id" :label="p.name" :value="p.id"></el-option>
+                      </el-select>
+                    </el-form-item>
+                    <el-form-item label="任务目标">
+                      <el-input v-model="aiForm.goal" type="textarea" :rows="3" placeholder="例如：开发项目协同系统前端，对接登录及数据加载" />
+                    </el-form-item>
+                    <el-form-item label="补充说明">
+                      <el-input v-model="aiForm.description" type="textarea" :rows="2" placeholder="如：拆分为3个任务，由张三开发UI" />
+                    </el-form-item>
+                    <el-button type="primary" style="width:100%" :loading="aiLoading" @click="runAiPlan">开始 AI 自动拆解</el-button>
+                  </el-form>
+                </el-card>
+              </el-col>
+              <el-col :span="16">
+                <div v-if="aiResult" class="ai-items-box">
+                  <div class="ai-summary-box">
+                    <h4>千问 AI 大模型分析概述</h4>
+                    <p style="font-size:13px; margin-top:5px;">{{ aiResult.summary }}</p>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h4 style="font-size:14px;">生成的任务草稿（请调整负责人后导入）</h4>
+                    <el-button type="success" size="small" @click="importAiTasks">批量导入系统 ({{selectedAiItems.length}})</el-button>
+                  </div>
+                  
+                  <el-table :data="aiResult.items" @selection-change="handleAiSelect" style="width:100%">
+                    <el-table-column type="selection" width="50"></el-table-column>
+                    <el-table-column prop="title" label="任务标题">
+                      <template #default="s"><el-input v-model="s.row.title" size="small" /></template>
+                    </el-table-column>
+                    <el-table-column prop="description" label="详细描述">
+                      <template #default="s"><el-input v-model="s.row.description" type="textarea" :rows="1" size="small" /></template>
+                    </el-table-column>
+                    <el-table-column label="优先级" width="90">
+                      <template #default="s">
+                        <el-select v-model="s.row.priority" size="small">
+                          <el-option label="高" value="高"></el-option>
+                          <el-option label="中" value="中"></el-option>
+                          <el-option label="低" value="低"></el-option>
+                        </el-select>
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="推荐负责人" width="130">
+                      <template #default="s">
+                        <el-select v-model="s.row.assigneeId" size="small">
+                          <el-option v-for="u in users" :key="u.id" :label="u.realName" :value="u.id"></el-option>
+                        </el-select>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                </div>
+                <div v-else style="background:white; height:350px; display:flex; align-items:center; justify-content:center; border: 1px dashed var(--border-color); border-radius:8px;">
+                  <span style="color:var(--text-disabled)">暂无拆解数据，请在左侧设定目标并发起 AI 拆分</span>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
+
+          <!-- 3.4 任务管理 -->
+          <div v-if="activeMenu === 'tasks'">
+            <div class="table-actions">
+              <el-select v-model="taskFilterProj" placeholder="项目过滤" style="width:200px;" clearable>
+                <el-option v-for="p in projects" :key="p.id" :label="p.name" :value="p.id"></el-option>
+              </el-select>
+              <el-button v-if="currentUser.role==='负责人'" type="primary" @click="openAddTask">新建普通任务</el-button>
+            </div>
+            
+            <el-table :data="filteredTasks" style="width: 100%">
+              <el-table-column prop="id" label="ID" width="60"></el-table-column>
+              <el-table-column prop="title" label="任务标题" width="160"></el-table-column>
+              <el-table-column prop="projectName" label="项目名称" width="140"></el-table-column>
+              <el-table-column prop="assigneeName" label="负责人" width="100"></el-table-column>
+              <el-table-column prop="status" label="任务状态" width="100">
+                <template #default="s">
+                  <el-tag :type="s.row.status==='已完成'?'success':(s.row.status==='进行中'?'primary':'info')" size="small">{{s.row.status}}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="priority" label="优先级" width="90">
+                <template #default="s">
+                  <el-tag :type="s.row.priority==='高'?'danger':(s.row.priority==='中'?'warning':'info')" size="small">{{s.row.priority}}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="due_date" label="截止日期" width="110"></el-table-column>
+              <el-table-column label="父子级关联" width="130">
+                <template #default="s">
+                  <span v-if="s.row.parent_id">子任务 (父ID: {{s.row.parent_id}})</span>
+                  <span v-else style="color:var(--text-disabled)">顶层主任务</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="220">
+                <template #default="s">
+                  <!-- 编辑限制逻辑：如果是负责人，或者该任务的负责人是当前用户，则可以编辑 -->
+                  <el-button v-if="currentUser.role === '负责人' || s.row.assignee_id === currentUser.id" type="primary" link @click="openEditTask(s.row)">
+                    {{ currentUser.role === '负责人' ? '编辑' : '更新状态' }}
+                  </el-button>
+                  <el-button type="warning" link @click="getTaskAiHelp(s.row)">AI建议</el-button>
+                  <el-button v-if="currentUser.role === '负责人'" type="danger" link @click="deleteTask(s.row.id)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- 3.5 进度跟踪 -->
+          <div v-if="activeMenu === 'logs'">
+            <div class="table-actions">
+              <el-button type="primary" @click="openFeedback(null)">新增工作进度反馈</el-button>
+            </div>
+            <el-table :data="logs" style="width: 100%">
+              <el-table-column prop="id" label="ID" width="60"></el-table-column>
+              <el-table-column prop="taskTitle" label="所属任务" width="180"></el-table-column>
+              <el-table-column prop="progress_percent" label="进度百分比" width="150">
+                <template #default="s"><el-progress :percentage="s.row.progress_percent" /></template>
+              </el-table-column>
+              <el-table-column prop="content" label="进展文字描述" show-overflow-tooltip></el-table-column>
+              <el-table-column prop="operatorName" label="汇报人" width="100"></el-table-column>
+              <el-table-column prop="create_time" label="反馈时间" width="160"></el-table-column>
+            </el-table>
+          </div>
+
+          <!-- 3.6 总结中心 -->
+          <div v-if="activeMenu === 'summaries'">
+            <div class="table-actions">
+              <el-button type="primary" @click="openAddSummary">撰写新总结报告</el-button>
+            </div>
+            <el-table :data="summaries" style="width: 100%">
+              <el-table-column prop="id" label="ID" width="60"></el-table-column>
+              <el-table-column prop="projectName" label="所属项目" width="180"></el-table-column>
+              <el-table-column prop="taskTitle" label="关联任务" width="150">
+                <template #default="s">{{ s.row.taskTitle || '项目总体总结' }}</template>
+              </el-table-column>
+              <el-table-column prop="summary_type" label="总结类型" width="110">
+                <template #default="s">
+                  <el-tag :type="s.row.summary_type==='最终总结'?'success':'info'" size="small">{{s.row.summary_type}}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="content" label="总结心得体会与成效" show-overflow-tooltip></el-table-column>
+              <el-table-column prop="creatorName" label="总结人" width="100"></el-table-column>
+              <el-table-column prop="create_time" label="提交时间" width="160"></el-table-column>
+            </el-table>
+          </div>
+
+          <!-- 3.7 成员列表 -->
+          <div v-if="activeMenu === 'members'">
+            <el-table :data="users" style="width: 100%">
+              <el-table-column prop="id" label="ID" width="80"></el-table-column>
+              <el-table-column prop="realName" label="姓名" width="140"></el-table-column>
+              <el-table-column prop="username" label="账号" width="140"></el-table-column>
+              <el-table-column prop="role" label="系统角色" width="120">
+                <template #default="s">
+                  <span class="role-tag" :class="s.row.role==='负责人'?'role-leader':'role-member'">{{s.row.role}}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="phone" label="联系电话" width="150"></el-table-column>
+              <el-table-column prop="email" label="电子邮箱" show-overflow-tooltip></el-table-column>
+            </el-table>
+          </div>
+
+          <!-- 3.8 个人信息 -->
+          <div v-if="activeMenu === 'profile'">
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-card>
+                  <template #header><div style="font-weight:600">个人主页信息</div></template>
+                  <el-descriptions :column="1" border>
+                    <el-descriptions-item label="登录用户名">{{currentUser.username}}</el-descriptions-item>
+                    <el-descriptions-item label="真实姓名">{{currentUser.realName}}</el-descriptions-item>
+                    <el-descriptions-item label="系统权限角色">{{currentUser.role}}</el-descriptions-item>
+                    <el-descriptions-item label="联系电话">{{currentUser.phone || '暂无'}}</el-descriptions-item>
+                  </el-descriptions>
+                </el-card>
+              </el-col>
+              <el-col :span="12">
+                <el-card>
+                  <template #header><div style="font-weight:600">系统密码修改</div></template>
+                  <el-form label-position="top">
+                    <el-form-item label="输入旧密码"><el-input v-model="pwdForm.old" type="password" show-password /></el-form-item>
+                    <el-form-item label="输入新密码"><el-input v-model="pwdForm.newPwd" type="password" show-password /></el-form-item>
+                    <el-form-item label="确认新密码"><el-input v-model="pwdForm.confirm" type="password" show-password /></el-form-item>
+                    <el-button type="primary" style="width:100%" @click="changePwd">提交更新密码</el-button>
+                  </el-form>
+                </el-card>
+              </el-col>
+            </el-row>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ==================== 各类对话框弹出组件 ==================== -->
+      
+      <!-- A. 项目弹窗 -->
+      <el-dialog :title="projFormTitle" v-model="projDialogVisible" width="500px">
+        <el-form label-position="top">
+          <el-form-item label="项目名称"><el-input v-model="projForm.name" /></el-form-item>
+          <el-form-item label="描述说明"><el-input v-model="projForm.description" type="textarea" :rows="3" /></el-form-item>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="状态">
+                <el-select v-model="projForm.status" style="width:100%;">
+                  <el-option label="未开始" value="未开始"></el-option>
+                  <el-option label="进行中" value="进行中"></el-option>
+                  <el-option label="已完成" value="已完成"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="优先级">
+                <el-select v-model="projForm.priority" style="width:100%;">
+                  <el-option label="低" value="低"></el-option>
+                  <el-option label="中" value="中"></el-option>
+                  <el-option label="高" value="高"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-form-item label="项目负责人">
+            <el-select v-model="projForm.owner_id" style="width:100%;">
+              <el-option v-for="u in users" :key="u.id" :label="u.realName" :value="u.id"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="projDialogVisible=false">取消</el-button>
+          <el-button type="primary" @click="saveProject">保存项目</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- B. 任务弹窗 (成员禁用大部分输入) -->
+      <el-dialog :title="taskFormTitle" v-model="taskDialogVisible" width="500px">
+        <el-form label-position="top">
+          <el-form-item label="对应项目">
+            <el-select v-model="taskForm.project_id" style="width:100%;" :disabled="currentUser.role !== '负责人'" @change="onTaskProjChange">
+              <el-option v-for="p in projects" :key="p.id" :label="p.name" :value="p.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="选择父任务 (实现二级层级)">
+            <el-select v-model="taskForm.parent_id" style="width:100%;" :disabled="currentUser.role !== '负责人'" clearable placeholder="无">
+              <el-option v-for="t in taskSelectOpts" :key="t.id" :label="t.title" :value="t.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="任务名称">
+            <el-input v-model="taskForm.title" :disabled="currentUser.role !== '负责人'" />
+          </el-form-item>
+          <el-form-item label="任务描述">
+            <el-input v-model="taskForm.description" type="textarea" :rows="2" :disabled="currentUser.role !== '负责人'" />
+          </el-form-item>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="负责人">
+                <el-select v-model="taskForm.assignee_id" style="width:100%;" :disabled="currentUser.role !== '负责人'">
+                  <el-option v-for="u in users" :key="u.id" :label="u.realName" :value="u.id"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="优先级">
+                <el-select v-model="taskForm.priority" style="width:100%;" :disabled="currentUser.role !== '负责人'">
+                  <el-option label="低" value="低"></el-option>
+                  <el-option label="中" value="中"></el-option>
+                  <el-option label="高" value="高"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="10">
+            <el-col :span="12">
+              <el-form-item label="任务状态">
+                <el-select v-model="taskForm.status" style="width:100%;">
+                  <el-option label="未开始" value="未开始"></el-option>
+                  <el-option label="进行中" value="进行中"></el-option>
+                  <el-option label="已完成" value="已完成"></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="截止日期">
+                <el-date-picker v-model="taskForm.due_date" type="date" value-format="YYYY-MM-DD" style="width:100%;" :disabled="currentUser.role !== '负责人'" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </el-form>
+        <template #footer>
+          <el-button @click="taskDialogVisible=false">取消</el-button>
+          <el-button type="primary" @click="saveTask">保存任务</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- C. 进度汇报弹窗 -->
+      <el-dialog title="新增进度反馈" v-model="logDialogVisible" width="450px">
+        <el-form label-position="top">
+          <el-form-item label="汇报对应任务">
+            <el-select v-model="logForm.task_id" style="width:100%;">
+              <el-option v-for="t in tasks" :key="t.id" :label="t.title" :value="t.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="当前百分比进度 (%)">
+            <el-slider v-model="logForm.progress_percent" :min="0" :max="100" />
+          </el-form-item>
+          <el-form-item label="说明进展">
+            <el-input v-model="logForm.content" type="textarea" :rows="3" placeholder="工作进展说明" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="logDialogVisible=false">取消</el-button>
+          <el-button type="primary" @click="saveFeedback">汇报提交</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- D. 总结报告弹窗 -->
+      <el-dialog title="撰写总结报告" v-model="sumDialogVisible" width="500px">
+        <el-form label-position="top">
+          <el-form-item label="选择总结项目">
+            <el-select v-model="sumForm.project_id" style="width:100%;" @change="onSumProjChange">
+              <el-option v-for="p in projects" :key="p.id" :label="p.name" :value="p.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="选择总结任务 (可选)">
+            <el-select v-model="sumForm.task_id" style="width:100%;" clearable>
+              <el-option v-for="t in taskSelectOpts" :key="t.id" :label="t.title" :value="t.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="总结类型">
+            <el-radio-group v-model="sumForm.summary_type">
+              <el-radio label="阶段总结">阶段工作总结</el-radio>
+              <el-radio label="最终总结">项目终结报告</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="总结心得成效描述">
+            <el-input v-model="sumForm.content" type="textarea" :rows="4" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="sumDialogVisible=false">取消</el-button>
+          <el-button type="primary" @click="saveSummary">提交总结</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- E. AI 建议抽屉 -->
+      <el-drawer title="阿里云千问大模型 AI 助手" v-model="aiDrawerVisible" size="360px">
+        <div style="padding:10px;">
+          <div style="font-weight:bold; color:var(--google-yellow-hover); margin-bottom:15px; display:flex; align-items:center; gap:5px;">
+            <span>💡</span> 千问任务执行建议（300字以内）
+          </div>
+          <div class="suggestion-box">
+            {{ activeAiText }}
+          </div>
+          <p style="color:var(--text-disabled); font-size:11px; margin-top:20px; text-align:center;">* AI 结果为教学演示生成，供学习参考</p>
+        </div>
+      </el-drawer>
+
+    </div>
+
+  </div>
+
+  <!-- 3. 引入 Vue 3, Element Plus, Element Plus Icons CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    // 默认测试数据表结构
+    const DEFAULT_USERS = [
+      { id: 1, username: 'admin', realName: '系统管理员', role: '负责人', phone: '13800000000', email: 'admin@flowsync.com', create_time: '2026-07-01 10:00:00' },
+      { id: 2, username: 'leader', realName: '项目负责人', role: '负责人', phone: '13811111111', email: 'leader@flowsync.com', create_time: '2026-07-01 10:05:00' },
+      { id: 3, username: 'member1', realName: '张三', role: '成员', phone: '13922222222', email: 'zhangsan@flowsync.com', create_time: '2026-07-02 09:30:00' },
+      { id: 4, username: 'member2', realName: '李四', role: '成员', phone: '13933333333', email: 'lisi@flowsync.com', create_time: '2026-07-02 10:15:00' }
+    ];
+    const DEFAULT_PROJECTS = [
+      { id: 1, name: 'FlowSync 小组协同系统', description: '基于 Spring Boot + Vue 3 的教学协同平台，集成阿里云千问大模型进行辅助任务拆分与建议。', status: '进行中', priority: '高', owner_id: 2, ownerName: '项目负责人', start_date: '2026-07-01', end_date: '2026-07-30' },
+      { id: 2, name: '人工智能图像算法实践', description: '小组实践：基于残差卷积神经网络进行植物叶片病害识别。', status: '未开始', priority: '中', owner_id: 2, ownerName: '项目负责人', start_date: '2026-08-01', end_date: '2026-08-25' }
+    ];
+    const DEFAULT_TASKS = [
+      { id: 1, project_id: 1, projectName: 'FlowSync 小组协同系统', parent_id: null, title: '编写需求规格说明书', description: '梳理和编写系统的功能模块、ER关系设计、API详细说明书文档。', assignee_id: 2, assigneeName: '项目负责人', creator_id: 2, status: '已完成', priority: '高', due_date: '2026-07-08' },
+      { id: 2, project_id: 1, projectName: 'FlowSync 小组协同系统', parent_id: null, title: '前端登录与注册页面开发', description: '利用HTML/JS/Vue3以及Element Plus绘制美观的登录和注册页面，并且完成密码的一致性验证和路由跳转。', assignee_id: 3, assigneeName: '张三', creator_id: 2, status: '进行中', priority: '高', due_date: '2026-07-15' },
+      { id: 3, project_id: 1, projectName: 'FlowSync 小组协同系统', parent_id: 2, title: '实现密码一致性校验逻辑', description: '子任务：在注册界面的前端表单增加自定义 validator 限制两次密码不匹配时报错。', assignee_id: 3, assigneeName: '张三', creator_id: 2, status: '进行中', priority: '中', due_date: '2026-07-12' },
+      { id: 4, project_id: 1, projectName: 'FlowSync 小组协同系统', parent_id: null, title: '后端核心接口与数据库建表', description: '设计 sys_user, project_info, task_info, task_log, task_summary 等5张业务表。', assignee_id: 4, assigneeName: '李四', creator_id: 2, status: '进行中', priority: '高', due_date: '2026-07-18' }
+    ];
+    const DEFAULT_LOGS = [
+      { id: 1, task_id: 1, taskTitle: '编写需求规格说明书', progress_percent: 100, content: '需求规格说明书已完成评审并输出为 Markdown 规格文档。', operator_id: 2, operatorName: '项目负责人', create_time: '2026-07-08 09:00:00' },
+      { id: 2, task_id: 2, taskTitle: '前端登录与注册页面开发', progress_percent: 60, content: '已完成登录注册的视觉布局以及表单验证规则。', operator_id: 3, operatorName: '张三', create_time: '2026-07-08 10:20:00' }
+    ];
+    const DEFAULT_SUMMARIES = [
+      { id: 1, project_id: 1, projectName: 'FlowSync 小组协同系统', task_id: 1, taskTitle: '编写需求规格说明书', summary_type: '阶段总结', content: '第一阶段的需求梳理非常顺利，明确了协同的核心闭环，为后续前后端并发编码打下了坚实基础。', created_by: 2, creatorName: '项目负责人', create_time: '2026-07-08 09:30:00' }
+    ];
+
+    const app = createApp({
+      setup() {
+        // --- 路由与用户 ---
+        const currentPage = ref('login');
+        const currentUser = ref({ id: null, username: '', realName: '', role: '', phone: '' });
+        const activeMenu = ref('overview');
+        
+        // --- 表单模型与校验 ---
+        const loginForm = ref({ username: '', password: '' });
+        const loginRules = {
+          username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+          password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+        };
+        
+        const registerForm = ref({ username: '', realName: '', password: '', confirmPassword: '', phone: '', role: '成员' });
+        
+        const validatePass2 = (rule, value, callback) => {
+          if (value === '') {
+            callback(new Error('请再次输入密码'));
+          } else if (value !== registerForm.value.password) {
+            callback(new Error('两次输入密码不一致，请核对'));
+          } else {
+            callback();
+          }
+        };
+        const registerRules = {
+          username: [{ required: true, message: '请输入注册账号', trigger: 'blur' }],
+          realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
+          password: [{ required: true, message: '请输入密码', trigger: 'blur' }, { min: 6, message: '密码长度需在6位以上', trigger: 'blur' }],
+          confirmPassword: [{ required: true, validator: validatePass2, trigger: 'blur' }],
+          role: [{ required: true, message: '请选择角色', trigger: 'change' }]
+        };
+
+        // --- 核心业务数据源 (关联 LocalStorage) ---
+        const users = ref([]);
+        const projects = ref([]);
+        const tasks = ref([]);
+        const logs = ref([]);
+        const summaries = ref([]);
+        
+        const myTasks = computed(() => {
+          return tasks.value.filter(t => t.assignee_id === currentUser.value.id && t.status !== '已完成');
+        });
+
+        const stats = computed(() => {
+          return {
+            userCount: users.value.length,
+            projectCount: projects.value.length,
+            taskCount: tasks.value.length,
+            summaryCount: summaries.value.length
+          };
+        });
+
+        const taskFilterProj = ref('');
+        const filteredTasks = computed(() => {
+          if (!taskFilterProj.value) return tasks.value;
+          return tasks.value.filter(t => t.project_id === taskFilterProj.value);
+        });
+
+        const menuTitles = {
+          overview: '工作台总览统计',
+          projects: '项目基础信息管理',
+          'ai-plan': '大模型 AI 智能任务拆解',
+          tasks: '协同任务分配面板',
+          logs: '执行进度跟踪汇报',
+          summaries: '交付总结心得报告中心',
+          members: '团队协同成员列表',
+          profile: '个人中心安全设置'
+        };
+
+        // --- 模块初始化加载 ---
+        const loadAllData = () => {
+          if (!localStorage.getItem('preview_users')) {
+            localStorage.setItem('preview_users', JSON.stringify(DEFAULT_USERS));
+            localStorage.setItem('preview_projects', JSON.stringify(DEFAULT_PROJECTS));
+            localStorage.setItem('preview_tasks', JSON.stringify(DEFAULT_TASKS));
+            localStorage.setItem('preview_logs', JSON.stringify(DEFAULT_LOGS));
+            localStorage.setItem('preview_summaries', JSON.stringify(DEFAULT_SUMMARIES));
+          }
+          
+          users.value = JSON.parse(localStorage.getItem('preview_users'));
+          projects.value = JSON.parse(localStorage.getItem('preview_projects'));
+          tasks.value = JSON.parse(localStorage.getItem('preview_tasks'));
+          logs.value = JSON.parse(localStorage.getItem('preview_logs'));
+          summaries.value = JSON.parse(localStorage.getItem('preview_summaries'));
+
+          // 匹配视图绑定数据
+          projects.value.forEach(p => {
+            const u = users.value.find(user => user.id === p.owner_id);
+            p.ownerName = u ? u.realName : `用户ID:${p.owner_id}`;
+          });
+          
+          tasks.value.forEach(t => {
+            const p = projects.value.find(proj => proj.id === t.project_id);
+            t.projectName = p ? p.name : `项目ID:${t.project_id}`;
+            const u = users.value.find(user => user.id === t.assignee_id);
+            t.assigneeName = u ? u.realName : `用户ID:${t.assignee_id}`;
+          });
+
+          logs.value.forEach(l => {
+            const t = tasks.value.find(task => task.id === l.task_id);
+            l.taskTitle = t ? t.title : `任务ID:${l.task_id}`;
+            const u = users.value.find(user => user.id === l.operator_id);
+            l.operatorName = u ? u.realName : `汇报人ID:${l.operator_id}`;
+          });
+
+          summaries.value.forEach(s => {
+            const p = projects.value.find(proj => proj.id === s.project_id);
+            s.projectName = p ? p.name : `项目ID:${s.project_id}`;
+            if (s.task_id) {
+              const t = tasks.value.find(task => task.id === s.task_id);
+              s.taskTitle = t ? t.title : `任务ID:${s.task_id}`;
+            }
+            const u = users.value.find(user => user.id === s.created_by);
+            s.creatorName = u ? u.realName : `用户ID:${s.created_by}`;
+          });
+        };
+
+        // --- 登录注册事件处理 ---
+        const loginFormRef = ref(null);
+        const handleLogin = () => {
+          loginFormRef.value.validate((valid) => {
+            if (!valid) return;
+            const user = users.value.find(u => u.username === loginForm.value.username);
+            if (user && loginForm.value.password === '123456') { // 演示账号均设为 123456
+              currentUser.value = user;
+              sessionStorage.setItem('user', JSON.stringify(user));
+              currentPage.value = 'home';
+              ElementPlus.ElMessage.success(`欢迎您，[${user.role}] ${user.realName}！`);
+            } else {
+              ElementPlus.ElMessage.error('账号或密码不匹配（内置演示账号密码均为 123456）');
+            }
+          });
+        };
+
+        const registerFormRef = ref(null);
+        const handleRegister = () => {
+          registerFormRef.value.validate((valid) => {
+            if (!valid) return;
+            // 校验账号是否冲突
+            if (users.value.some(u => u.username === registerForm.value.username)) {
+              ElementPlus.ElMessage.error('账号已存在！请重新命名。');
+              return;
+            }
+
+            const newId = users.value.length + 1;
+            const newUser = {
+              id: newId,
+              username: registerForm.value.username,
+              realName: registerForm.value.realName,
+              role: registerForm.value.role,
+              phone: registerForm.value.phone,
+              email: registerForm.value.username + '@flowsync.com',
+              create_time: new Date().toLocaleString()
+            };
+
+            users.value.push(newUser);
+            localStorage.setItem('preview_users', JSON.stringify(users.value));
+            ElementPlus.ElMessage.success('账号注册成功！已自动填充并为您登录。');
+            
+            currentUser.value = newUser;
+            sessionStorage.setItem('user', JSON.stringify(newUser));
+            currentPage.value = 'home';
+          });
+        };
+
+        const fillLogin = (un) => {
+          loginForm.value.username = un;
+          loginForm.value.password = '123456';
+        };
+
+        const handleLogout = () => {
+          sessionStorage.clear();
+          currentPage.value = 'login';
+          ElementPlus.ElMessage.info('已登出系统');
+        };
+
+        const handleMenuSelect = (index) => {
+          activeMenu.value = index;
+        };
+
+        // ==================== A. 项目交互事件 ====================
+        const projDialogVisible = ref(false);
+        const projFormTitle = ref('新建项目');
+        const projForm = ref({ id: null, name: '', description: '', status: '未开始', priority: '中', owner_id: null });
+        
+        const openAddProject = () => {
+          projFormTitle.value = '新建项目';
+          projForm.value = { id: null, name: '', description: '', status: '未开始', priority: '中', owner_id: currentUser.value.id };
+          projDialogVisible.value = true;
+        };
+        const openEditProject = (row) => {
+          projFormTitle.value = '编辑项目';
+          projForm.value = { ...row };
+          projDialogVisible.value = true;
+        };
+        const saveProject = () => {
+          if (!projForm.value.name) return ElementPlus.ElMessage.warning('项目名称必填');
+          
+          let list = JSON.parse(localStorage.getItem('preview_projects'));
+          if (projForm.value.id) {
+            const i = list.findIndex(p => p.id === projForm.value.id);
+            if (i !== -1) list[i] = { ...projForm.value };
+            ElementPlus.ElMessage.success('修改项目成功');
+          } else {
+            projForm.value.id = list.length + 1;
+            list.push({ ...projForm.value });
+            ElementPlus.ElMessage.success('创建项目成功');
+          }
+          localStorage.setItem('preview_projects', JSON.stringify(list));
+          projDialogVisible.value = false;
+          loadAllData();
+        };
+        const deleteProject = (id) => {
+          let list = JSON.parse(localStorage.getItem('preview_projects'));
+          list = list.filter(p => p.id !== id);
+          localStorage.setItem('preview_projects', JSON.stringify(list));
+          ElementPlus.ElMessage.success('项目删除成功');
+          loadAllData();
+        };
+
+        // ==================== B. AI 任务拆解 ====================
+        const aiForm = ref({ projectId: '', goal: '', description: '' });
+        const aiLoading = ref(false);
+        const aiResult = ref(null);
+        const selectedAiItems = ref([]);
+
+        const runAiPlan = () => {
+          if (!aiForm.value.projectId || !aiForm.value.goal) {
+            return ElementPlus.ElMessage.warning('请选择项目并填写核心任务目标');
+          }
+          aiLoading.value = true;
+          aiResult.value = null;
+
+          setTimeout(() => {
+            aiLoading.value = false;
+            aiResult.value = {
+              summary: '阿里云千问大模型已为您将宏大目标拆分为可按流程执行的子任务，已预置了推荐人选和优先级。',
+              items: [
+                { title: '协同管理前端页面编码与组件设计', description: '利用 Vue3 搭建侧边栏面板布局，设计登录注册页。', priority: '高', assigneeId: 3 },
+                { title: '编写后端 MyBatis-Plus 业务接口与实体类', description: '完成 project_info 表及 task_info 表的 REST 接口映射。', priority: '高', assigneeId: 4 },
+                { title: '项目前后端代理跨域代理配置与测试', description: '设置 Vite 的 devServer proxy，确保 currentUserId 在所有请求头和查询中正确包含。', priority: '中', assigneeId: currentUser.value.id }
+              ]
+            };
+            ElementPlus.ElMessage.success('大模型拆解成功！已在右侧生成草稿');
+          }, 1500);
+        };
+
+        const handleAiSelect = (val) => {
+          selectedAiItems.value = val;
+        };
+
+        const importAiTasks = () => {
+          if (selectedAiItems.value.length === 0) return ElementPlus.ElMessage.warning('请勾选拟导入的子任务');
+          
+          let list = JSON.parse(localStorage.getItem('preview_tasks'));
+          const baseId = list.length > 0 ? Math.max(...list.map(t => t.id)) : 0;
+          
+          selectedAiItems.value.forEach((item, index) => {
+            list.push({
+              id: baseId + index + 1,
+              project_id: aiForm.value.projectId,
+              parent_id: null,
+              title: item.title,
+              description: item.description,
+              assignee_id: item.assigneeId,
+              creator_id: currentUser.value.id,
+              status: '未开始',
+              priority: item.priority || '中',
+              due_date: new Date(Date.now() + 5*24*3600*1000).toISOString().split('T')[0]
+            });
+          });
+
+          localStorage.setItem('preview_tasks', JSON.stringify(list));
+          ElementPlus.ElMessage.success(`成功导入 ${selectedAiItems.value.length} 个任务，可在“任务管理”栏查看`);
+          aiResult.value = null;
+          activeMenu.value = 'tasks';
+          loadAllData();
+        };
+
+        // ==================== C. 任务管理 (二级关联及权限限制) ====================
+        const taskDialogVisible = ref(false);
+        const taskFormTitle = ref('新建任务');
+        const taskForm = ref({ id: null, project_id: '', parent_id: null, title: '', description: '', assignee_id: null, creator_id: null, status: '未开始', priority: '中', due_date: '' });
+        const taskSelectOpts = ref([]);
+
+        const onTaskProjChange = (val) => {
+          taskForm.value.parent_id = null;
+          if (val) {
+            taskSelectOpts.value = tasks.value.filter(t => t.project_id === val && !t.parent_id);
+          } else {
+            taskSelectOpts.value = [];
+          }
+        };
+
+        const openAddTask = () => {
+          taskFormTitle.value = '新建任务';
+          taskForm.value = { id: null, project_id: '', parent_id: null, title: '', description: '', assignee_id: null, creator_id: currentUser.value.id, status: '未开始', priority: '中', due_date: '' };
+          taskSelectOpts.value = [];
+          taskDialogVisible.value = true;
+        };
+
+        const openEditTask = (row) => {
+          taskForm.value = { ...row };
+          if (currentUser.value.role !== '负责人') {
+            taskFormTitle.value = '更新任务状态';
+          } else {
+            taskFormTitle.value = '编辑任务';
+            taskSelectOpts.value = tasks.value.filter(t => t.project_id === row.project_id && !t.parent_id);
+          }
+          taskDialogVisible.value = true;
+        };
+
+        const saveTask = () => {
+          if (!taskForm.value.title) return ElementPlus.ElMessage.warning('任务标题不可为空');
+          let list = JSON.parse(localStorage.getItem('preview_tasks'));
+          
+          if (taskForm.value.id) {
+            const idx = list.findIndex(t => t.id === taskForm.value.id);
+            if (idx !== -1) list[idx] = { ...taskForm.value };
+            ElementPlus.ElMessage.success('修改任务成功');
+          } else {
+            taskForm.value.id = list.length + 1;
+            list.push({ ...taskForm.value });
+            ElementPlus.ElMessage.success('新增普通任务成功');
+          }
+
+          localStorage.setItem('preview_tasks', JSON.stringify(list));
+          taskDialogVisible.value = false;
+          loadAllData();
+        };
+
+        const deleteTask = (id) => {
+          let list = JSON.parse(localStorage.getItem('preview_tasks'));
+          list = list.filter(t => t.id !== id);
+          localStorage.setItem('preview_tasks', JSON.stringify(list));
+          ElementPlus.ElMessage.success('任务已成功清除');
+          loadAllData();
+        };
+
+        // --- AI 单任务执行建议 ---
+        const aiDrawerVisible = ref(false);
+        const activeAiText = ref('');
+        const getTaskAiHelp = (row) => {
+          activeAiText.value = '正在连通阿里云千问大模型，计算当前任务的拆解策略...';
+          aiDrawerVisible.value = true;
+          
+          setTimeout(() => {
+            activeAiText.value = `💡针对任务「${row.title}」，大模型给出的协同配合建议：
+1. 子任务细化：
+   - 先行分析原型图，编写 HTML DOM 标签框架。
+   - 配置 Element Plus 表单 rules，添加自定义双密码校验规则。
+   - 打通 Axios 通讯，利用 sessionStorage 记录登录会话。
+2. 风险防范：前台路由必须附加全局守卫，当 sessionStorage 未见凭证时强制重定向回 /login。
+3. 截止时间紧凑，建议由张三与项目负责人于第三天合并代码联调。`;
+          }, 1000);
+        };
+
+        // ==================== D. 进度反馈与总结中心 ====================
+        const logDialogVisible = ref(false);
+        const logForm = ref({ task_id: null, progress_percent: 50, content: '' });
+
+        const openFeedback = (taskId) => {
+          logForm.value = { task_id: taskId || null, progress_percent: 0, content: '' };
+          logDialogVisible.value = true;
+        };
+
+        const saveFeedback = () => {
+          if (!logForm.value.task_id || !logForm.value.content) return ElementPlus.ElMessage.warning('信息填写不全');
+          
+          let list = JSON.parse(localStorage.getItem('preview_logs'));
+          list.push({
+            id: list.length + 1,
+            task_id: logForm.value.task_id,
+            progress_percent: logForm.value.progress_percent,
+            content: logForm.value.content,
+            operator_id: currentUser.value.id,
+            create_time: new Date().toLocaleString()
+          });
+          localStorage.setItem('preview_logs', JSON.stringify(list));
+
+          // 同步更改关联任务进度百分比与状态
+          let tList = JSON.parse(localStorage.getItem('preview_tasks'));
+          const tIdx = tList.findIndex(t => t.id === logForm.value.task_id);
+          if (tIdx !== -1) {
+            tList[tIdx].progress_percent = logForm.value.progress_percent;
+            if (logForm.value.progress_percent === 100) {
+              tList[tIdx].status = '已完成';
+            } else if (logForm.value.progress_percent > 0) {
+              tList[tIdx].status = '进行中';
+            }
+          }
+          localStorage.setItem('preview_tasks', JSON.stringify(tList));
+
+          ElementPlus.ElMessage.success('进度汇报成功！同步调整关联任务状态');
+          logDialogVisible.value = false;
+          loadAllData();
+        };
+
+        const sumDialogVisible = ref(false);
+        const sumForm = ref({ project_id: '', task_id: null, summary_type: '阶段总结', content: '' });
+
+        const onSumProjChange = (val) => {
+          sumForm.value.task_id = null;
+          if (val) {
+            taskSelectOpts.value = tasks.value.filter(t => t.project_id === val);
+          } else {
+            taskSelectOpts.value = [];
+          }
+        };
+
+        const openAddSummary = () => {
+          sumForm.value = { project_id: '', task_id: null, summary_type: '阶段总结', content: '' };
+          taskSelectOpts.value = [];
+          sumDialogVisible.value = true;
+        };
+
+        const saveSummary = () => {
+          if (!sumForm.value.project_id || !sumForm.value.content) return ElementPlus.ElMessage.warning('信息填写不全');
+          
+          let list = JSON.parse(localStorage.getItem('preview_summaries'));
+          list.push({
+            id: list.length + 1,
+            project_id: sumForm.value.project_id,
+            task_id: sumForm.value.task_id,
+            summary_type: sumForm.value.summary_type,
+            content: sumForm.value.content,
+            created_by: currentUser.value.id,
+            create_time: new Date().toLocaleString()
+          });
+          localStorage.setItem('preview_summaries', JSON.stringify(list));
+
+          ElementPlus.ElMessage.success('提交总结成功');
+          sumDialogVisible.value = false;
+          loadAllData();
+        };
+
+        // ==================== E. 安全修改密码 ====================
+        const pwdForm = ref({ old: '', newPwd: '', confirm: '' });
+        const changePwd = () => {
+          if (!pwdForm.value.old || !pwdForm.value.newPwd) return ElementPlus.ElMessage.warning('密码输入框不可为空');
+          if (pwdForm.value.newPwd !== pwdForm.value.confirm) return ElementPlus.ElMessage.error('两次密码输入不匹配！');
+          
+          ElementPlus.ElMessage.success('密码更新成功，在本地环境中已模拟应用！');
+          pwdForm.value = { old: '', newPwd: '', confirm: '' };
+        };
+
+        onMounted(() => {
+          loadAllData();
+          // 如果会话有用户直接登录
+          const sessionUser = sessionStorage.getItem('user');
+          if (sessionUser) {
+            currentUser.value = JSON.parse(sessionUser);
+            currentPage.value = 'home';
+          }
+        });
+
+        return {
+          currentPage,
+          currentUser,
+          activeMenu,
+          loginForm,
+          loginRules,
+          registerForm,
+          registerRules,
+          users,
+          projects,
+          tasks,
+          logs,
+          summaries,
+          myTasks,
+          stats,
+          taskFilterProj,
+          filteredTasks,
+          menuTitles,
+          
+          fillLogin,
+          handleLogin,
+          handleRegister,
+          handleLogout,
+          handleMenuSelect,
+
+          // 项目
+          projDialogVisible,
+          projFormTitle,
+          projForm,
+          openAddProject,
+          openEditProject,
+          saveProject,
+          deleteProject,
+
+          // AI拆解
+          aiForm,
+          aiLoading,
+          aiResult,
+          selectedAiItems,
+          runAiPlan,
+          handleAiSelect,
+          importAiTasks,
+
+          // 任务管理
+          taskDialogVisible,
+          taskFormTitle,
+          taskForm,
+          taskSelectOpts,
+          onTaskProjChange,
+          openAddTask,
+          openEditTask,
+          saveTask,
+          deleteTask,
+          
+          // AI 建议
+          aiDrawerVisible,
+          activeAiText,
+          getTaskAiHelp,
+
+          // 进度
+          logDialogVisible,
+          logForm,
+          openFeedback,
+          saveFeedback,
+
+          // 总结
+          sumDialogVisible,
+          sumForm,
+          onSumProjChange,
+          openAddSummary,
+          saveSummary,
+
+          // 安全修改密码
+          pwdForm,
+          changePwd,
+          
+          // 表单 DOM 引用 Ref
+          loginFormRef,
+          registerFormRef
+        };
+      }
+    });
+
+    // 挂载全部 Element Plus 图标
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component);
+    }
+    
+    app.use(ElementPlus);
+    app.mount('#app');
+  </script>
+</body>
+</html>

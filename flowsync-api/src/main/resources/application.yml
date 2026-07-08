@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: flowsync-api
+  
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/flowsync_simple?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password:  # 根据本地 MySQL 密码调整，默认为 123456
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true # 开启驼峰命名自动映射
+  global-config:
+    db-config:
+      id-type: auto # 主键自增
+      table-underline: true # 数据库表名下划线映射
+
+# 阿里云千问 DashScope 配置
+dashscope:
+  api-key: ${DASHSCOPE_API_KEY:} # 建议配置环境变量 DASHSCOPE_API_KEY，或在此临时填写（注意不要提交）
