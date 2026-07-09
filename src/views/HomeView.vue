@@ -79,10 +79,18 @@
       <!-- 页面头部 -->
       <div class="content-header">
         <h2 class="page-title">{{ menuTitles[activeMenu] }}</h2>
-        <div class="header-actions">
+        <div class="header-actions" style="display: flex; align-items: center; gap: 15px;">
           <el-tag v-if="isMockMode" type="warning" effect="dark" size="small" class="mock-tag">
             本地数据模拟模式 (后端未连接)
           </el-tag>
+          <!-- 暗黑模式切换按钮 -->
+          <el-button 
+            type="info" 
+            circle 
+            :icon="isDarkMode ? 'Sunny' : 'Moon'" 
+            @click="toggleDarkMode" 
+            class="btn-theme"
+          />
           <span class="current-date">{{ currentDateStr }}</span>
         </div>
       </div>
@@ -133,25 +141,56 @@
 
           <el-row :gutter="20" class="overview-details">
             <el-col :span="16">
-              <el-card class="box-card">
+              <el-card class="box-card" style="margin-bottom: 20px;">
                 <template #header>
                   <div class="card-header">
-                    <span>我负责的任务 (进行中)</span>
-                    <el-button type="primary" link @click="activeMenu = 'tasks'">查看全部任务</el-button>
+                    <span>我负责的项目 (进行中)</span>
+                    <el-button type="primary" link @click="activeMenu = 'projects'">查看全部项目</el-button>
                   </div>
                 </template>
-                <el-table :data="myOngoingTasks" style="width: 100%" empty-text="当前没有正在进行中的负责任务">
-                  <el-table-column prop="title" label="任务名称" min-width="150" show-overflow-tooltip />
-                  <el-table-column prop="projectName" label="所属项目" min-width="120" />
+                <el-table :data="myOngoingProjects" style="width: 100%" empty-text="当前没有正在进行中的负责项目">
+                  <el-table-column prop="name" label="项目名称" min-width="150" show-overflow-tooltip />
                   <el-table-column prop="priority" label="优先级" width="90">
                     <template #default="scope">
                       <el-tag :type="getPriorityTag(scope.row.priority)">{{ scope.row.priority }}</el-tag>
                     </template>
                   </el-table-column>
-                  <el-table-column prop="due_date" label="截止日期" width="120" />
-                  <el-table-column label="操作" width="100">
+                  <el-table-column label="起止日期" min-width="180">
                     <template #default="scope">
-                      <el-button type="primary" link @click="openEditTaskDialog(scope.row)">更新进度</el-button>
+                      {{ scope.row.start_date || '未设置' }} 至 {{ scope.row.end_date || '未设置' }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="status" label="项目状态" width="100">
+                    <template #default="scope">
+                      <el-tag :type="getStatusTag(scope.row.status)">{{ scope.row.status }}</el-tag>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </el-card>
+
+              <el-card class="box-card">
+                <template #header>
+                  <div class="card-header">
+                    <span>分配给我的协力任务 (未完成)</span>
+                    <el-button type="primary" link @click="activeMenu = 'tasks'">查看全部任务</el-button>
+                  </div>
+                </template>
+                <el-table :data="myAssignedTasksInOthersProjects" style="width: 100%" empty-text="当前没有分配给您的协力任务">
+                  <el-table-column prop="title" label="任务标题" min-width="150" show-overflow-tooltip />
+                  <el-table-column prop="projectName" label="所属项目" min-width="120" show-overflow-tooltip />
+                  <el-table-column prop="priority" label="优先级" width="90">
+                    <template #default="scope">
+                      <el-tag :type="getPriorityTag(scope.row.priority)">{{ scope.row.priority }}</el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="status" label="任务状态" width="100">
+                    <template #default="scope">
+                      <el-tag :type="getStatusTag(scope.row.status)">{{ scope.row.status }}</el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="120">
+                    <template #default="scope">
+                      <el-button type="primary" link @click="openAddLogDialog(scope.row.id)">汇报进度</el-button>
                     </template>
                   </el-table-column>
                 </el-table>
@@ -159,6 +198,27 @@
             </el-col>
 
             <el-col :span="8">
+              <!-- 全盘任务完成度仪表盘 -->
+              <el-card class="box-card" style="margin-bottom: 20px; text-align: center;">
+                <template #header>
+                  <div class="card-header" style="justify-content: center;">
+                    <span>全盘任务完成度</span>
+                  </div>
+                </template>
+                <div style="padding: 10px 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <el-progress 
+                    type="dashboard" 
+                    :percentage="overallProgress" 
+                    :color="progressColors"
+                    :stroke-width="12"
+                    :width="135"
+                  />
+                  <div style="margin-top: 10px; font-size: 13px; color: var(--text-secondary);">
+                    当前共 {{ tasks.length }} 个任务，已完成 {{ completedTasksCount }} 个
+                  </div>
+                </div>
+              </el-card>
+
               <el-card class="box-card">
                 <template #header>
                   <div class="card-header">
@@ -186,14 +246,17 @@
 
         <!-- ==================== 2. 项目管理面板 ==================== -->
         <div v-if="activeMenu === 'projects'" class="panel-projects">
-          <div class="table-actions">
-            <el-input 
-              v-model="searchProjectQuery" 
-              placeholder="搜索项目名称/描述" 
-              prefix-icon="Search"
-              clearable 
-              style="width: 300px; margin-right: 15px;"
-            />
+          <div class="table-actions" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center;">
+              <el-input 
+                v-model="searchProjectQuery" 
+                placeholder="搜索项目名称/描述" 
+                prefix-icon="Search"
+                clearable 
+                style="width: 300px; margin-right: 15px;"
+              />
+              <el-checkbox v-model="hideCompletedProjects" label="隐藏已完成项目" border />
+            </div>
             <el-button v-if="isLeader" type="primary" @click="openAddProjectDialog">
               <el-icon><Plus /></el-icon> 新建项目
             </el-button>
@@ -290,7 +353,7 @@
                     style="width: 100%; margin-top: 15px;"
                     @selection-change="handleAiSelectionChange"
                   >
-                    <el-table-type-column type="selection" width="55" />
+                    <el-table-column type="selection" width="55" />
                     <el-table-column prop="title" label="任务标题" min-width="120">
                       <template #default="scope">
                         <el-input v-model="scope.row.title" size="small" />
@@ -335,21 +398,32 @@
 
         <!-- ==================== 4. 任务管理面板 ==================== -->
         <div v-if="activeMenu === 'tasks'" class="panel-tasks">
-          <div class="table-actions">
-            <el-select v-model="taskFilterProjectId" placeholder="按项目筛选" clearable style="width: 200px; margin-right: 15px;">
-              <el-option v-for="item in projects" :key="item.id" :label="item.name" :value="item.id" />
-            </el-select>
-            <el-select v-model="taskFilterStatus" placeholder="按状态筛选" clearable style="width: 150px; margin-right: 15px;">
-              <el-option label="未开始" value="未开始" />
-              <el-option label="进行中" value="进行中" />
-              <el-option label="已完成" value="已完成" />
-            </el-select>
-            <el-button v-if="isLeader" type="primary" @click="openAddTaskDialog">
-              <el-icon><Plus /></el-icon> 新建任务
-            </el-button>
+          <div class="table-actions" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center;">
+              <el-select v-model="taskFilterProjectId" placeholder="按项目筛选" clearable style="width: 200px; margin-right: 15px;">
+                <el-option v-for="item in projects" :key="item.id" :label="item.name" :value="item.id" />
+              </el-select>
+              <el-select v-model="taskFilterStatus" placeholder="按状态筛选" clearable style="width: 150px; margin-right: 15px;" :disabled="taskViewMode === 'kanban' || hideCompletedTasks">
+                <el-option label="未开始" value="未开始" />
+                <el-option label="进行中" value="进行中" />
+                <el-option label="已完成" value="已完成" />
+              </el-select>
+              <el-checkbox v-model="hideCompletedTasks" label="隐藏已完成任务" border />
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <el-radio-group v-model="taskViewMode" size="default">
+                <el-radio-button label="list">列表视图</el-radio-button>
+                <el-radio-button label="kanban">看板视图</el-radio-button>
+              </el-radio-group>
+              <el-button v-if="isLeader" type="primary" @click="openAddTaskDialog">
+                <el-icon><Plus /></el-icon> 新建任务
+              </el-button>
+            </div>
           </div>
 
-          <el-table :data="filteredTasks" style="width: 100%" row-key="id" default-expand-all>
+          <!-- 列表视图 -->
+          <el-table v-if="taskViewMode === 'list'" :data="filteredTasks" style="width: 100%" row-key="id" default-expand-all>
             <el-table-column prop="id" label="ID" width="70" />
             <el-table-column prop="title" label="任务标题" min-width="150" />
             <el-table-column prop="projectName" label="所属项目" min-width="120" />
@@ -369,7 +443,7 @@
               <template #default="scope">
                 <!-- 负责人可以编辑全部，成员只能在属于自己负责的任务上点击更新状态 -->
                 <el-button 
-                  v-if="isLeader || scope.row.assigneeId === currentUser.id" 
+                  v-if="isLeader || scope.row.assigneeId === currentUser.id || scope.row.assignee_id === currentUser.id" 
                   type="primary" 
                   link 
                   @click="openEditTaskDialog(scope.row)"
@@ -382,6 +456,170 @@
               </template>
             </el-table-column>
           </el-table>
+
+          <!-- 看板视图 -->
+          <div v-else class="kanban-board">
+            <el-row :gutter="20">
+              <!-- 1. 未开始栏 -->
+              <el-col :span="8">
+                <div class="kanban-column kanban-todo">
+                  <div class="column-header">
+                    <span class="column-title">未开始</span>
+                    <el-tag size="small" type="info" round>{{ kanbanTodoTasks.length }}</el-tag>
+                  </div>
+                  <div class="kanban-cards-wrapper">
+                    <el-card v-for="task in kanbanTodoTasks" :key="task.id" class="kanban-task-card" shadow="never">
+                      <div class="kanban-card-body">
+                        <div class="kanban-card-title">{{ task.title }}</div>
+                        <div v-if="task.description" class="kanban-card-desc">{{ task.description }}</div>
+                        <div class="kanban-card-tags">
+                          <el-tag size="small" type="info">{{ task.projectName }}</el-tag>
+                          <el-tag size="small" :type="getPriorityTag(task.priority)">{{ task.priority }}</el-tag>
+                        </div>
+                        <div class="kanban-card-meta">
+                          <div class="kanban-card-assignee">
+                            <div class="kanban-card-avatar">{{ task.assigneeName ? task.assigneeName.substring(0, 1) : 'U' }}</div>
+                            <span>{{ task.assigneeName }}</span>
+                          </div>
+                          <span>{{ task.due_date || '无截止日期' }}</span>
+                        </div>
+                        <div class="kanban-card-actions">
+                          <div class="kanban-card-left-btns">
+                            <el-button size="small" type="primary" link @click="handleGetAiSuggestion(task)">AI建议</el-button>
+                            <el-button size="small" type="info" link @click="openAddLogDialog(task.id)">反馈</el-button>
+                            <el-button 
+                              v-if="isLeader || task.assigneeId === currentUser.id || task.assignee_id === currentUser.id" 
+                              size="small" 
+                              type="primary" 
+                              link 
+                              @click="openEditTaskDialog(task)"
+                            >
+                              {{ isLeader ? '编辑' : '更新' }}
+                            </el-button>
+                          </div>
+                          <el-dropdown trigger="click" @command="(cmd) => moveTaskStatus(task, cmd)">
+                            <el-button size="small" type="success" plain>流转 <el-icon><ArrowDown /></el-icon></el-button>
+                            <template #dropdown>
+                              <el-dropdown-menu>
+                                <el-dropdown-item command="进行中">开始执行 (进行中)</el-dropdown-item>
+                                <el-dropdown-item command="已完成">直接完成 (已完成)</el-dropdown-item>
+                              </el-dropdown-menu>
+                            </template>
+                          </el-dropdown>
+                        </div>
+                      </div>
+                    </el-card>
+                  </div>
+                </div>
+              </el-col>
+
+              <!-- 2. 进行中栏 -->
+              <el-col :span="8">
+                <div class="kanban-column kanban-inprogress">
+                  <div class="column-header">
+                    <span class="column-title">进行中</span>
+                    <el-tag size="small" type="warning" round>{{ kanbanInProgressTasks.length }}</el-tag>
+                  </div>
+                  <div class="kanban-cards-wrapper">
+                    <el-card v-for="task in kanbanInProgressTasks" :key="task.id" class="kanban-task-card" shadow="never">
+                      <div class="kanban-card-body">
+                        <div class="kanban-card-title">{{ task.title }}</div>
+                        <div v-if="task.description" class="kanban-card-desc">{{ task.description }}</div>
+                        <div class="kanban-card-tags">
+                          <el-tag size="small" type="info">{{ task.projectName }}</el-tag>
+                          <el-tag size="small" :type="getPriorityTag(task.priority)">{{ task.priority }}</el-tag>
+                        </div>
+                        <div class="kanban-card-meta">
+                          <div class="kanban-card-assignee">
+                            <div class="kanban-card-avatar">{{ task.assigneeName ? task.assigneeName.substring(0, 1) : 'U' }}</div>
+                            <span>{{ task.assigneeName }}</span>
+                          </div>
+                          <span>{{ task.due_date || '无截止日期' }}</span>
+                        </div>
+                        <div class="kanban-card-actions">
+                          <div class="kanban-card-left-btns">
+                            <el-button size="small" type="primary" link @click="handleGetAiSuggestion(task)">AI建议</el-button>
+                            <el-button size="small" type="info" link @click="openAddLogDialog(task.id)">反馈</el-button>
+                            <el-button 
+                              v-if="isLeader || task.assigneeId === currentUser.id || task.assignee_id === currentUser.id" 
+                              size="small" 
+                              type="primary" 
+                              link 
+                              @click="openEditTaskDialog(task)"
+                            >
+                              {{ isLeader ? '编辑' : '更新' }}
+                            </el-button>
+                          </div>
+                          <el-dropdown trigger="click" @command="(cmd) => moveTaskStatus(task, cmd)">
+                            <el-button size="small" type="warning" plain>流转 <el-icon><ArrowDown /></el-icon></el-button>
+                            <template #dropdown>
+                              <el-dropdown-menu>
+                                <el-dropdown-item command="未开始">挂起回退 (未开始)</el-dropdown-item>
+                                <el-dropdown-item command="已完成">标记完成 (已完成)</el-dropdown-item>
+                              </el-dropdown-menu>
+                            </template>
+                          </el-dropdown>
+                        </div>
+                      </div>
+                    </el-card>
+                  </div>
+                </div>
+              </el-col>
+
+              <!-- 3. 已完成栏 -->
+              <el-col :span="8">
+                <div class="kanban-column kanban-completed">
+                  <div class="column-header">
+                    <span class="column-title">已完成</span>
+                    <el-tag size="small" type="success" round>{{ kanbanCompletedTasks.length }}</el-tag>
+                  </div>
+                  <div class="kanban-cards-wrapper">
+                    <el-card v-for="task in kanbanCompletedTasks" :key="task.id" class="kanban-task-card" shadow="never">
+                      <div class="kanban-card-body">
+                        <div class="kanban-card-title" style="text-decoration: line-through; opacity: 0.6;">{{ task.title }}</div>
+                        <div v-if="task.description" class="kanban-card-desc" style="opacity: 0.6;">{{ task.description }}</div>
+                        <div class="kanban-card-tags">
+                          <el-tag size="small" type="info" style="opacity: 0.7;">{{ task.projectName }}</el-tag>
+                          <el-tag size="small" :type="getPriorityTag(task.priority)" style="opacity: 0.7;">{{ task.priority }}</el-tag>
+                        </div>
+                        <div class="kanban-card-meta">
+                          <div class="kanban-card-assignee">
+                            <div class="kanban-card-avatar" style="opacity: 0.7;">{{ task.assigneeName ? task.assigneeName.substring(0, 1) : 'U' }}</div>
+                            <span style="opacity: 0.7;">{{ task.assigneeName }}</span>
+                          </div>
+                          <span style="opacity: 0.7;">{{ task.due_date || '无截止日期' }}</span>
+                        </div>
+                        <div class="kanban-card-actions">
+                          <div class="kanban-card-left-btns">
+                            <el-button size="small" type="primary" link @click="handleGetAiSuggestion(task)">AI建议</el-button>
+                            <el-button size="small" type="info" link @click="openAddLogDialog(task.id)">反馈</el-button>
+                            <el-button 
+                              v-if="isLeader || task.assigneeId === currentUser.id || task.assignee_id === currentUser.id" 
+                              size="small" 
+                              type="primary" 
+                              link 
+                              @click="openEditTaskDialog(task)"
+                            >
+                              {{ isLeader ? '编辑' : '更新' }}
+                            </el-button>
+                          </div>
+                          <el-dropdown trigger="click" @command="(cmd) => moveTaskStatus(task, cmd)">
+                            <el-button size="small" type="danger" plain>流转 <el-icon><ArrowDown /></el-icon></el-button>
+                            <template #dropdown>
+                              <el-dropdown-menu>
+                                <el-dropdown-item command="未开始">重置回退 (未开始)</el-dropdown-item>
+                                <el-dropdown-item command="进行中">重新执行 (进行中)</el-dropdown-item>
+                              </el-dropdown-menu>
+                            </template>
+                          </el-dropdown>
+                        </div>
+                      </div>
+                    </el-card>
+                  </div>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
         </div>
 
         <!-- ==================== 5. 进度跟踪面板 ==================== -->
@@ -762,6 +1000,33 @@ export default {
     const loading = ref(false)
     const isMockMode = ref(false) // 判定是否启用前端 Mock 数据降级模式
     
+    // 🌓 暗黑模式状态管理
+    const isDarkMode = ref(false)
+    const toggleDarkMode = () => {
+      isDarkMode.value = !isDarkMode.value
+      if (isDarkMode.value) {
+        document.documentElement.classList.add('dark-theme')
+        localStorage.setItem('fs_dark_mode', 'true')
+      } else {
+        document.documentElement.classList.remove('dark-theme')
+        localStorage.setItem('fs_dark_mode', 'false')
+      }
+    }
+    const initDarkMode = () => {
+      const savedMode = localStorage.getItem('fs_dark_mode')
+      if (savedMode === 'true') {
+        isDarkMode.value = true
+        document.documentElement.classList.add('dark-theme')
+      } else {
+        isDarkMode.value = false
+        document.documentElement.classList.remove('dark-theme')
+      }
+    }
+    initDarkMode()
+
+    // 📋 看板/列表视图模式 (list / kanban)
+    const taskViewMode = ref('list')
+    
     const isLeader = computed(() => currentUser.value.role === '负责人')
     
     const menuTitles = {
@@ -823,16 +1088,105 @@ export default {
     const summaries = ref([])
     const users = ref([])
 
-    const myOngoingTasks = computed(() => {
-      return tasks.value.filter(t => t.assignee_id === currentUser.value.id && t.status !== '已完成')
+    const myOngoingProjects = computed(() => {
+      return projects.value.filter(p => p.owner_id === currentUser.value.id && p.status !== '已完成')
     })
+
+    const myAssignedTasksInOthersProjects = computed(() => {
+      return tasks.value.filter(t => {
+        // 任务负责人 ID (兼容 camelCase 和 snake_case)
+        const assigneeId = t.assignee_id !== undefined ? t.assignee_id : t.assigneeId
+        // 任务分配给我了，且未完成
+        if (assigneeId !== currentUser.value.id || t.status === '已完成') {
+          return false
+        }
+        // 查找所属项目 ID (兼容 camelCase 和 snake_case)
+        const projectId = t.project_id !== undefined ? t.project_id : t.projectId
+        const proj = projects.value.find(p => p.id === projectId)
+        // 该项目不是我负责
+        return proj && proj.owner_id !== currentUser.value.id
+      })
+    })
+
+    // 📊 仪表盘统计计算属性
+    const overallProgress = computed(() => {
+      if (tasks.value.length === 0) return 0
+      const completedCount = tasks.value.filter(t => t.status === '已完成').length
+      return Math.round((completedCount / tasks.value.length) * 100)
+    })
+
+    const completedTasksCount = computed(() => {
+      return tasks.value.filter(t => t.status === '已完成').length
+    })
+
+    const progressColors = [
+      { color: '#f56c6c', percentage: 20 },
+      { color: '#e6a23c', percentage: 40 },
+      { color: '#5cb87a', percentage: 60 },
+      { color: '#1989fa', percentage: 80 },
+      { color: '#6f7ad3', percentage: 100 }
+    ]
+
+    // 📋 看板分列过滤属性
+    const kanbanTodoTasks = computed(() => {
+      return filteredTasks.value.filter(t => t.status === '未开始')
+    })
+    const kanbanInProgressTasks = computed(() => {
+      return filteredTasks.value.filter(t => t.status === '进行中')
+    })
+    const kanbanCompletedTasks = computed(() => {
+      return filteredTasks.value.filter(t => t.status === '已完成')
+    })
+
+    // 🚀 任务看板流转方法
+    const moveTaskStatus = async (task, newStatus) => {
+      loading.value = true
+      const updatedTask = { ...task, status: newStatus }
+      try {
+        const res = await taskApi.saveTask(currentUser.value.id, updatedTask)
+        if (res.success) {
+          ElMessage.success(`任务 [${task.title}] 已流转至: ${newStatus}`)
+          await loadAllData()
+        } else {
+          ElMessage.error(res.message || '流转失败')
+        }
+      } catch (error) {
+        console.error(error)
+        // Mock 模式兜底修改
+        const localTasksStr = localStorage.getItem('fs_tasks')
+        if (localTasksStr) {
+          const localTasks = JSON.parse(localTasksStr)
+          const idx = localTasks.findIndex(t => t.id === task.id)
+          if (idx > -1) {
+            localTasks[idx].status = newStatus
+            localStorage.setItem('fs_tasks', JSON.stringify(localTasks))
+            
+            const tIdx = tasks.value.findIndex(t => t.id === task.id)
+            if (tIdx > -1) {
+              tasks.value[tIdx].status = newStatus
+            }
+            ElMessage.success(`(本地模式) 任务状态已变更为: ${newStatus}`)
+            enhanceDataBindings()
+          }
+        }
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const hideCompletedProjects = ref(false)
+    const hideCompletedTasks = ref(false)
 
     // 筛选过滤器
     const searchProjectQuery = ref('')
     const filteredProjects = computed(() => {
-      if (!searchProjectQuery.value) return projects.value
+      let list = projects.value
+      if (hideCompletedProjects.value) {
+        list = list.filter(p => p.status !== '已完成')
+      }
+      if (!searchProjectQuery.value) return list
       const query = searchProjectQuery.value.toLowerCase()
-      return projects.value.filter(p => 
+      return list.filter(p => 
         p.name.toLowerCase().includes(query) || 
         (p.description && p.description.toLowerCase().includes(query))
       )
@@ -842,6 +1196,9 @@ export default {
     const taskFilterStatus = ref('')
     const filteredTasks = computed(() => {
       let result = tasks.value
+      if (hideCompletedTasks.value) {
+        result = result.filter(t => t.status !== '已完成')
+      }
       if (taskFilterProjectId.value) {
         result = result.filter(t => t.project_id === taskFilterProjectId.value)
       }
@@ -1043,6 +1400,7 @@ export default {
     }
 
     // --- B. 任务拆解 (AI 能力) ---
+    const aiFormRef = ref(null)
     const aiForm = ref({ projectId: '', goal: '', description: '' })
     const aiFormRules = {
       projectId: [{ required: true, message: '请选择项目', trigger: 'change' }],
@@ -1537,7 +1895,20 @@ export default {
       logs,
       summaries,
       users,
-      myOngoingTasks,
+      myOngoingProjects,
+      myAssignedTasksInOthersProjects,
+      isDarkMode,
+      toggleDarkMode,
+      taskViewMode,
+      overallProgress,
+      completedTasksCount,
+      progressColors,
+      kanbanTodoTasks,
+      kanbanInProgressTasks,
+      kanbanCompletedTasks,
+      moveTaskStatus,
+      hideCompletedProjects,
+      hideCompletedTasks,
       searchProjectQuery,
       filteredProjects,
       taskFilterProjectId,

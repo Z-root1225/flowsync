@@ -1,0 +1,24 @@
+# 前端依赖与打包过滤
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env.*.local
+
+# 后端 Maven 编译过滤
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE与编辑器缓存过滤
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+*.sublime-workspace
+.DS_Store
+Thumbs.db

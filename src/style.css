@@ -214,3 +214,226 @@ a:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: #bdc1c6;
 }
+
+/* ==================== Dark Theme (暗黑模式) ==================== */
+:root.dark-theme {
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --text-disabled: #5f6368;
+  
+  --bg-page: #121212;
+  --bg-card: #202124;
+  --border-color: #3c4043;
+  --border-hover: #5f6368;
+  
+  --google-blue-light: rgba(26, 115, 232, 0.15);
+  --google-red-light: rgba(217, 48, 37, 0.15);
+  --google-yellow-light: rgba(249, 171, 0, 0.15);
+  --google-green-light: rgba(30, 142, 62, 0.15);
+  
+  /* Element Plus 暗黑主题映射覆盖 */
+  --el-bg-color-page: #121212 !important;
+  --el-bg-color: #202124 !important;
+  --el-text-color-primary: #e8eaed !important;
+  --el-text-color-regular: #9aa0a6 !important;
+  --el-border-color-light: #3c4043 !important;
+  --el-border-color-lighter: #2a2b2e !important;
+  --el-fill-color-blank: #202124 !important;
+  --el-fill-color-light: #2d2e30 !important;
+  --el-border-color: #3c4043 !important;
+  
+  /* 其他基础底色覆盖 */
+  background-color: #121212;
+}
+
+:root.dark-theme .user-profile-summary {
+  border-bottom-color: #2d2e30;
+}
+:root.dark-theme .el-table th.el-table__cell {
+  background-color: #28292c !important;
+}
+:root.dark-theme ::-webkit-scrollbar-thumb {
+  background: #3c4043;
+}
+:root.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: #5f6368;
+}
+
+/* ==================== Interaction Micro-Animations (交互微动效) ==================== */
+/* 页面背景、卡片背景及颜色平滑过渡 */
+body, .home-container, .sidebar, .main-content, .el-card, .el-table, 
+.el-table th, .el-table td, .el-input__inner, .el-textarea__inner, .el-menu, .el-menu-item {
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 卡片悬浮位移与发光阴影 */
+.stat-card, .box-card, .el-card {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.stat-card:hover, .box-card:hover, .el-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+}
+:root.dark-theme .stat-card:hover, 
+:root.dark-theme .box-card:hover, 
+:root.dark-theme .el-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 按钮微动效：悬停升起、点击微缩 */
+.el-button {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+              background-color 0.15s !important;
+}
+.el-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.el-button:active {
+  transform: scale(0.95) !important;
+}
+
+/* 看板卡片特有悬浮动效 */
+.kanban-task-card {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s !important;
+}
+.kanban-task-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  border-color: var(--google-blue) !important;
+  box-shadow: 0 6px 16px rgba(26, 115, 232, 0.15) !important;
+}
+:root.dark-theme .kanban-task-card:hover {
+  box-shadow: 0 6px 16px rgba(26, 115, 232, 0.3) !important;
+}
+
+/* ==================== Kanban Board Layout (任务看板布局) ==================== */
+.kanban-board {
+  margin-top: 15px;
+}
+.kanban-column {
+  background-color: #f1f3f4;
+  border-radius: 8px;
+  padding: 16px;
+  min-height: calc(100vh - 220px);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+:root.dark-theme .kanban-column {
+  background-color: #1a1b1e;
+}
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-color);
+}
+.kanban-todo .column-header {
+  border-bottom-color: var(--google-blue);
+}
+.kanban-inprogress .column-header {
+  border-bottom-color: var(--google-yellow);
+}
+.kanban-completed .column-header {
+  border-bottom-color: var(--google-green);
+}
+.column-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.kanban-cards-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 280px);
+  padding: 2px;
+}
+.kanban-task-card {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+}
+.kanban-task-card :deep(.el-card__body) {
+  padding: 14px !important;
+}
+.kanban-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kanban-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+.kanban-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kanban-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.kanban-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.kanban-card-assignee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kanban-card-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--google-blue-light);
+  color: var(--google-blue);
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kanban-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+.kanban-card-left-btns {
+  display: flex;
+  gap: 4px;
+}
+
+

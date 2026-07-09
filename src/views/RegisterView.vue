@@ -55,6 +55,15 @@
           />
         </el-form-item>
 
+        <el-form-item label="电子邮箱" prop="email">
+          <el-input 
+            v-model="registerForm.email" 
+            placeholder="请输入电子邮箱" 
+            prefix-icon="Message"
+            clearable
+          />
+        </el-form-item>
+
         <el-form-item label="注册角色" prop="role">
           <el-select v-model="registerForm.role" placeholder="选择注册角色" style="width: 100%;">
             <el-option label="普通成员 (执行者)" value="成员" />
@@ -94,6 +103,7 @@ export default {
       password: '',
       confirmPassword: '',
       phone: '',
+      email: '',
       role: '成员' // 默认注册为“成员”
     })
 
@@ -140,6 +150,9 @@ export default {
       phone: [
         { validator: validatePhone, trigger: 'blur' }
       ],
+      email: [
+        { type: 'email', message: '请输入正确的电子邮箱格式', trigger: 'blur' }
+      ],
       role: [
         { required: true, message: '请选择注册角色', trigger: 'change' }
       ]
@@ -157,6 +170,7 @@ export default {
             password: registerForm.value.password,
             realName: registerForm.value.realName,
             phone: registerForm.value.phone,
+            email: registerForm.value.email,
             role: registerForm.value.role
           })
           
@@ -191,7 +205,8 @@ export default {
             username: registerForm.value.username,
             realName: registerForm.value.realName || registerForm.value.username,
             role: registerForm.value.role,
-            phone: registerForm.value.phone
+            phone: registerForm.value.phone,
+            email: registerForm.value.email
           }
           sessionStorage.setItem('user', JSON.stringify(mockUser))
           router.push('/')
