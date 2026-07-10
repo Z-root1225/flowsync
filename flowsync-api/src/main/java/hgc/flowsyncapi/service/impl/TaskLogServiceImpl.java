@@ -16,6 +16,7 @@ import hgc.flowsyncapi.service.ProjectInfoService;
 import org.springframework.context.annotation.Lazy;
 
 @Service
+@SuppressWarnings("all")
 public class TaskLogServiceImpl extends ServiceImpl<TaskLogMapper, TaskLog> implements TaskLogService {
 
     @Autowired
@@ -60,4 +61,56 @@ public class TaskLogServiceImpl extends ServiceImpl<TaskLogMapper, TaskLog> impl
         }
         return success;
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateById(TaskLog entity) {
+        boolean success = super.updateById(entity);
+        if (success && entity.getTaskId() != null) {
+            recalculateTaskStatus(entity.getTaskId());
+        }
+        return success;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean removeById(java.io.Serializable id) {
+        TaskLog log = this.getById(id);
+        boolean success = super.removeById(id);
+        if (success && log != null && log.getTaskId() != null) {
+            recalculateTaskStatus(log.getTaskId());
+        }
+        return success;
+    }
+
+    private void recalculateTaskStatus(Long taskId) {
+        if (taskId == null) return;
+        TaskInfo task = taskInfoMapper.selectById(taskId);
+        if (task == null) return;
+
+        // 查找该任务最新的一条进度反馈记录
+        LambdaQueryWrapper<TaskLog> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(TaskLog::getTaskId, taskId).orderByDesc(TaskLog::getId).last("limit 1");
+        TaskLog latestLog = this.getOne(queryWrapper);
+
+        if (latestLog != null) {
+            if (latestLog.getProgressPercent() >= 100) {
+                task.setStatus("已完成");
+            } else if (latestLog.getProgressPercent() > 0) {
+                task.setStatus("进行中");
+            } else {
+                task.setStatus("未开始");
+            }
+        } else {
+            // 如果进度记录全部删除了，将任务状态重设为“未开始”
+            task.setStatus("未开始");
+        }
+        taskInfoMapper.updateById(task);
+
+        // 同步更新父项目状态
+        if (task.getProjectId() != null) {
+            projectInfoService.updateProjectStatus(task.getProjectId());
+        }
+    }
 }
+

@@ -13,7 +13,7 @@ public class ApiTest {
         String apiKey = System.getenv("DASHSCOPE_API_KEY");
         if (apiKey == null || apiKey.trim().isEmpty()) {
             // 如果环境变量没配，你也可以在这临时填入进行测试，但切记测试完后不要提交此文件
-            apiKey = "your-api-key-here";
+            apiKey = "YOUR_DASHSCOPE_API_KEY_HERE";
         }
         String apiUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
         

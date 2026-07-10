@@ -45,4 +45,15 @@ public class UserController {
             return ApiResponse.error("更新密码数据库异常，请稍后再试");
         }
     }
+
+    // 注销账号
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> deleteUser(@PathVariable("id") Long id) {
+        boolean success = userService.removeById(id);
+        if (success) {
+            return ApiResponse.success("账号已成功注销", "User unregistered successfully");
+        } else {
+            return ApiResponse.error("账号注销失败，请稍后再试");
+        }
+    }
 }

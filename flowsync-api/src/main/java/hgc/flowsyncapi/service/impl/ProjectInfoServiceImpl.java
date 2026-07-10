@@ -9,15 +9,45 @@ import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import hgc.flowsyncapi.entity.TaskInfo;
 import hgc.flowsyncapi.mapper.TaskInfoMapper;
+import hgc.flowsyncapi.entity.TaskLog;
+import hgc.flowsyncapi.mapper.TaskLogMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@SuppressWarnings("all")
 public class ProjectInfoServiceImpl extends ServiceImpl<ProjectInfoMapper, ProjectInfo> implements ProjectInfoService {
 
     @Autowired
     private TaskInfoMapper taskInfoMapper;
+
+    @Autowired
+    private TaskLogMapper taskLogMapper;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean removeById(java.io.Serializable id) {
+        // 1. 查询该项目下所有的任务
+        LambdaQueryWrapper<TaskInfo> taskWrapper = new LambdaQueryWrapper<>();
+        taskWrapper.eq(TaskInfo::getProjectId, id);
+        List<TaskInfo> tasks = taskInfoMapper.selectList(taskWrapper);
+
+        if (tasks != null && !tasks.isEmpty()) {
+            for (TaskInfo task : tasks) {
+                // 2. 删除每个任务关联的进度日志
+                LambdaQueryWrapper<TaskLog> logWrapper = new LambdaQueryWrapper<>();
+                logWrapper.eq(TaskLog::getTaskId, task.getId());
+                taskLogMapper.delete(logWrapper);
+
+                // 3. 删除任务
+                taskInfoMapper.deleteById(task.getId());
+            }
+        }
+
+        // 4. 删除项目本身
+        return super.removeById(id);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

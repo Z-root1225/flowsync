@@ -61,6 +61,14 @@ export const taskLogApi = {
   // 新增进度记录
   addTaskLog(log) {
     return request.post('/task-logs', log)
+  },
+  // 修改进度记录
+  updateTaskLog(log) {
+    return request.put('/task-logs', log)
+  },
+  // 删除进度记录
+  deleteTaskLog(id) {
+    return request.delete(`/task-logs/${id}`)
   }
 }
 
@@ -73,6 +81,14 @@ export const summaryApi = {
   // 新增总结
   addSummary(summary) {
     return request.post('/summaries', summary)
+  },
+  // 修改总结
+  updateSummary(summary) {
+    return request.put('/summaries', summary)
+  },
+  // 删除总结
+  deleteSummary(id) {
+    return request.delete(`/summaries/${id}`)
   }
 }
 
@@ -89,6 +105,10 @@ export const userApi = {
   // 获取全部用户列表 (不含密码)
   getUsers() {
     return request.get('/users')
+  },
+  // 注销账号
+  deleteUser(id) {
+    return request.delete(`/users/${id}`)
   }
 }
 

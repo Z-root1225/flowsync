@@ -171,11 +171,11 @@
               <el-card class="box-card">
                 <template #header>
                   <div class="card-header">
-                    <span>分配给我的协力任务 (未完成)</span>
+                    <span>分配给我的任务 (未完成)</span>
                     <el-button type="primary" link @click="activeMenu = 'tasks'">查看全部任务</el-button>
                   </div>
                 </template>
-                <el-table :data="myAssignedTasksInOthersProjects" style="width: 100%" empty-text="当前没有分配给您的协力任务">
+                <el-table :data="myAssignedTasksInOthersProjects" style="width: 100%" empty-text="当前没有分配给您的任务">
                   <el-table-column prop="title" label="任务标题" min-width="150" show-overflow-tooltip />
                   <el-table-column prop="projectName" label="所属项目" min-width="120" show-overflow-tooltip />
                   <el-table-column prop="priority" label="优先级" width="90">
@@ -257,12 +257,23 @@
               />
               <el-checkbox v-model="hideCompletedProjects" label="隐藏已完成项目" border />
             </div>
-            <el-button v-if="isLeader" type="primary" @click="openAddProjectDialog">
-              <el-icon><Plus /></el-icon> 新建项目
-            </el-button>
+            <div style="display: flex; gap: 15px;">
+              <el-button 
+                v-if="isLeader" 
+                type="danger" 
+                :disabled="selectedProjectIds.length === 0" 
+                @click="handleBatchDeleteProjects"
+              >
+                <el-icon><Delete /></el-icon> 批量删除 ({{ selectedProjectIds.length }})
+              </el-button>
+              <el-button v-if="isLeader" type="primary" @click="openAddProjectDialog">
+                <el-icon><Plus /></el-icon> 新建项目
+              </el-button>
+            </div>
           </div>
 
-          <el-table :data="filteredProjects" style="width: 100%">
+          <el-table :data="filteredProjects" style="width: 100%" @selection-change="handleProjectSelectionChange">
+            <el-table-column type="selection" width="55" v-if="isLeader" />
             <el-table-column prop="id" label="ID" width="70" />
             <el-table-column prop="name" label="项目名称" min-width="150" />
             <el-table-column prop="description" label="项目描述" min-width="200" show-overflow-tooltip />
@@ -416,6 +427,14 @@
                 <el-radio-button label="list">列表视图</el-radio-button>
                 <el-radio-button label="kanban">看板视图</el-radio-button>
               </el-radio-group>
+              <el-button 
+                v-if="isLeader" 
+                type="danger" 
+                :disabled="selectedTaskIds.length === 0" 
+                @click="handleBatchDeleteTasks"
+              >
+                <el-icon><Delete /></el-icon> 批量删除 ({{ selectedTaskIds.length }})
+              </el-button>
               <el-button v-if="isLeader" type="primary" @click="openAddTaskDialog">
                 <el-icon><Plus /></el-icon> 新建任务
               </el-button>
@@ -423,7 +442,8 @@
           </div>
 
           <!-- 列表视图 -->
-          <el-table v-if="taskViewMode === 'list'" :data="filteredTasks" style="width: 100%" row-key="id" default-expand-all>
+          <el-table v-if="taskViewMode === 'list'" :data="filteredTasks" style="width: 100%" row-key="id" default-expand-all @selection-change="handleTaskSelectionChange">
+            <el-table-column type="selection" width="55" v-if="isLeader" />
             <el-table-column prop="id" label="ID" width="70" />
             <el-table-column prop="title" label="任务标题" min-width="150" />
             <el-table-column prop="projectName" label="所属项目" min-width="120" />
@@ -443,7 +463,7 @@
               <template #default="scope">
                 <!-- 负责人可以编辑全部，成员只能在属于自己负责的任务上点击更新状态 -->
                 <el-button 
-                  v-if="isLeader || scope.row.assigneeId === currentUser.id || scope.row.assignee_id === currentUser.id" 
+                  v-if="isLeader || scope.row.assigneeId == currentUser.id || scope.row.assignee_id == currentUser.id" 
                   type="primary" 
                   link 
                   @click="openEditTaskDialog(scope.row)"
@@ -470,7 +490,17 @@
                   <div class="kanban-cards-wrapper">
                     <el-card v-for="task in kanbanTodoTasks" :key="task.id" class="kanban-task-card" shadow="never">
                       <div class="kanban-card-body">
-                        <div class="kanban-card-title">{{ task.title }}</div>
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; width: 100%;">
+                          <div class="kanban-card-title" style="flex: 1; display: flex; align-items: flex-start;">
+                            <el-checkbox 
+                              v-if="isLeader" 
+                              :model-value="selectedTaskIds.includes(task.id)" 
+                              @change="(val) => handleKanbanTaskSelect(task.id, val)" 
+                              style="margin-right: 8px; height: auto;"
+                            />
+                            <span>{{ task.title }}</span>
+                          </div>
+                        </div>
                         <div v-if="task.description" class="kanban-card-desc">{{ task.description }}</div>
                         <div class="kanban-card-tags">
                           <el-tag size="small" type="info">{{ task.projectName }}</el-tag>
@@ -488,13 +518,22 @@
                             <el-button size="small" type="primary" link @click="handleGetAiSuggestion(task)">AI建议</el-button>
                             <el-button size="small" type="info" link @click="openAddLogDialog(task.id)">反馈</el-button>
                             <el-button 
-                              v-if="isLeader || task.assigneeId === currentUser.id || task.assignee_id === currentUser.id" 
+                              v-if="isLeader || task.assigneeId == currentUser.id || task.assignee_id == currentUser.id" 
                               size="small" 
                               type="primary" 
                               link 
                               @click="openEditTaskDialog(task)"
                             >
                               {{ isLeader ? '编辑' : '更新' }}
+                            </el-button>
+                            <el-button 
+                              v-if="isLeader" 
+                              size="small" 
+                              type="danger" 
+                              link 
+                              @click="handleDeleteTask(task.id)"
+                            >
+                              删除
                             </el-button>
                           </div>
                           <el-dropdown trigger="click" @command="(cmd) => moveTaskStatus(task, cmd)">
@@ -523,7 +562,17 @@
                   <div class="kanban-cards-wrapper">
                     <el-card v-for="task in kanbanInProgressTasks" :key="task.id" class="kanban-task-card" shadow="never">
                       <div class="kanban-card-body">
-                        <div class="kanban-card-title">{{ task.title }}</div>
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; width: 100%;">
+                          <div class="kanban-card-title" style="flex: 1; display: flex; align-items: flex-start;">
+                            <el-checkbox 
+                              v-if="isLeader" 
+                              :model-value="selectedTaskIds.includes(task.id)" 
+                              @change="(val) => handleKanbanTaskSelect(task.id, val)" 
+                              style="margin-right: 8px; height: auto;"
+                            />
+                            <span>{{ task.title }}</span>
+                          </div>
+                        </div>
                         <div v-if="task.description" class="kanban-card-desc">{{ task.description }}</div>
                         <div class="kanban-card-tags">
                           <el-tag size="small" type="info">{{ task.projectName }}</el-tag>
@@ -541,13 +590,22 @@
                             <el-button size="small" type="primary" link @click="handleGetAiSuggestion(task)">AI建议</el-button>
                             <el-button size="small" type="info" link @click="openAddLogDialog(task.id)">反馈</el-button>
                             <el-button 
-                              v-if="isLeader || task.assigneeId === currentUser.id || task.assignee_id === currentUser.id" 
+                              v-if="isLeader || task.assigneeId == currentUser.id || task.assignee_id == currentUser.id" 
                               size="small" 
                               type="primary" 
                               link 
                               @click="openEditTaskDialog(task)"
                             >
                               {{ isLeader ? '编辑' : '更新' }}
+                            </el-button>
+                            <el-button 
+                              v-if="isLeader" 
+                              size="small" 
+                              type="danger" 
+                              link 
+                              @click="handleDeleteTask(task.id)"
+                            >
+                              删除
                             </el-button>
                           </div>
                           <el-dropdown trigger="click" @command="(cmd) => moveTaskStatus(task, cmd)">
@@ -576,7 +634,17 @@
                   <div class="kanban-cards-wrapper">
                     <el-card v-for="task in kanbanCompletedTasks" :key="task.id" class="kanban-task-card" shadow="never">
                       <div class="kanban-card-body">
-                        <div class="kanban-card-title" style="text-decoration: line-through; opacity: 0.6;">{{ task.title }}</div>
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; width: 100%;">
+                          <div class="kanban-card-title" style="flex: 1; display: flex; align-items: flex-start; text-decoration: line-through; opacity: 0.6;">
+                            <el-checkbox 
+                              v-if="isLeader" 
+                              :model-value="selectedTaskIds.includes(task.id)" 
+                              @change="(val) => handleKanbanTaskSelect(task.id, val)" 
+                              style="margin-right: 8px; height: auto;"
+                            />
+                            <span>{{ task.title }}</span>
+                          </div>
+                        </div>
                         <div v-if="task.description" class="kanban-card-desc" style="opacity: 0.6;">{{ task.description }}</div>
                         <div class="kanban-card-tags">
                           <el-tag size="small" type="info" style="opacity: 0.7;">{{ task.projectName }}</el-tag>
@@ -594,13 +662,22 @@
                             <el-button size="small" type="primary" link @click="handleGetAiSuggestion(task)">AI建议</el-button>
                             <el-button size="small" type="info" link @click="openAddLogDialog(task.id)">反馈</el-button>
                             <el-button 
-                              v-if="isLeader || task.assigneeId === currentUser.id || task.assignee_id === currentUser.id" 
+                              v-if="isLeader || task.assigneeId == currentUser.id || task.assignee_id == currentUser.id" 
                               size="small" 
                               type="primary" 
                               link 
                               @click="openEditTaskDialog(task)"
                             >
                               {{ isLeader ? '编辑' : '更新' }}
+                            </el-button>
+                            <el-button 
+                              v-if="isLeader" 
+                              size="small" 
+                              type="danger" 
+                              link 
+                              @click="handleDeleteTask(task.id)"
+                            >
+                              删除
                             </el-button>
                           </div>
                           <el-dropdown trigger="click" @command="(cmd) => moveTaskStatus(task, cmd)">
@@ -626,7 +703,7 @@
         <div v-if="activeMenu === 'logs'" class="panel-logs">
           <div class="table-actions">
             <el-select v-model="logFilterTaskId" placeholder="按关联任务筛选" clearable style="width: 250px; margin-right: 15px;">
-              <el-option v-for="item in tasks" :key="item.id" :label="item.title" :value="item.id" />
+              <el-option v-for="item in activeTasks" :key="item.id" :label="item.title" :value="item.id" />
             </el-select>
             <el-button type="primary" @click="openAddLogDialog(null)">
               <el-icon><Plus /></el-icon> 新增进度记录
@@ -644,6 +721,26 @@
             <el-table-column prop="content" label="进展说明" min-width="250" show-overflow-tooltip />
             <el-table-column prop="operatorName" label="汇报人" width="100" />
             <el-table-column prop="create_time" label="汇报时间" width="160" />
+            <el-table-column label="操作" width="150">
+              <template #default="scope">
+                <el-button 
+                  v-if="isLeader || scope.row.operator_id == currentUser.id || scope.row.operatorId == currentUser.id" 
+                  type="primary" 
+                  link 
+                  @click="openEditLogDialog(scope.row)"
+                >
+                  编辑
+                </el-button>
+                <el-button 
+                  v-if="isLeader || scope.row.operator_id == currentUser.id || scope.row.operatorId == currentUser.id" 
+                  type="danger" 
+                  link 
+                  @click="handleDeleteLog(scope.row.id)"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
 
@@ -673,6 +770,26 @@
             <el-table-column prop="content" label="总结内容" min-width="300" show-overflow-tooltip />
             <el-table-column prop="creatorName" label="总结人" width="100" />
             <el-table-column prop="create_time" label="提交时间" width="160" />
+            <el-table-column label="操作" width="150">
+              <template #default="scope">
+                <el-button 
+                  v-if="isLeader || scope.row.created_by == currentUser.id || scope.row.createdBy == currentUser.id" 
+                  type="primary" 
+                  link 
+                  @click="openEditSummaryDialog(scope.row)"
+                >
+                  编辑
+                </el-button>
+                <el-button 
+                  v-if="isLeader || scope.row.created_by == currentUser.id || scope.row.createdBy == currentUser.id" 
+                  type="danger" 
+                  link 
+                  @click="handleDeleteSummary(scope.row.id)"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
 
@@ -705,13 +822,24 @@
                     <span>个人信息</span>
                   </div>
                 </template>
-                <el-descriptions :column="1" border>
+                <el-descriptions :column="1" border style="margin-bottom: 20px;">
                   <el-descriptions-item label="登录账号">{{ currentUser.username }}</el-descriptions-item>
                   <el-descriptions-item label="真实姓名">{{ currentUser.realName }}</el-descriptions-item>
                   <el-descriptions-item label="系统角色">{{ currentUser.role }}</el-descriptions-item>
                   <el-descriptions-item label="联系电话">{{ currentUser.phone || '未设置' }}</el-descriptions-item>
                   <el-descriptions-item label="电子邮箱">{{ currentUser.email || '未设置' }}</el-descriptions-item>
                 </el-descriptions>
+
+                <!-- 危险操作：账号注销 -->
+                <div style="border-top: 1px solid var(--border-color); padding-top: 20px;">
+                  <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
+                    <el-icon style="color: #f56c6c; margin-top: 2px;"><Warning /></el-icon>
+                    <span><strong>危险操作警告：</strong>注销账号将从系统中永久删除本账号的数据且无法恢复，已分配的项目或协作任务将自动标记为已注销。</span>
+                  </div>
+                  <el-button type="danger" plain style="width: 100%;" @click="handleUnregisterAccount">
+                    注销并永久删除本账号
+                  </el-button>
+                </div>
               </el-card>
             </el-col>
 
@@ -890,13 +1018,13 @@
       </template>
     </el-dialog>
 
-    <!-- ==================== C. 新增进度汇报弹窗 ==================== -->
-    <el-dialog title="新增进度跟踪汇报" v-model="logDialogVisible" width="460px">
+    <!-- ==================== C. 新增/编辑进度汇报弹窗 ==================== -->
+    <el-dialog :title="logDialogTitle" v-model="logDialogVisible" width="460px">
       <el-form :model="logForm" :rules="logFormRules" ref="logFormRef" label-position="top">
         <el-form-item label="汇报对应任务" prop="task_id">
           <el-select v-model="logForm.task_id" placeholder="选择要反馈进度的任务" style="width: 100%;">
             <el-option 
-              v-for="item in tasks" 
+              v-for="item in activeTasks" 
               :key="item.id" 
               :label="`[${item.projectName}] ${item.title}`" 
               :value="item.id" 
@@ -1089,22 +1217,18 @@ export default {
     const users = ref([])
 
     const myOngoingProjects = computed(() => {
-      return projects.value.filter(p => p.owner_id === currentUser.value.id && p.status !== '已完成')
+      return projects.value.filter(p => {
+        const ownerId = p.owner_id !== undefined ? p.owner_id : p.ownerId
+        return Number(ownerId) === Number(currentUser.value.id) && p.status !== '已完成'
+      })
     })
 
     const myAssignedTasksInOthersProjects = computed(() => {
       return tasks.value.filter(t => {
         // 任务负责人 ID (兼容 camelCase 和 snake_case)
         const assigneeId = t.assignee_id !== undefined ? t.assignee_id : t.assigneeId
-        // 任务分配给我了，且未完成
-        if (assigneeId !== currentUser.value.id || t.status === '已完成') {
-          return false
-        }
-        // 查找所属项目 ID (兼容 camelCase 和 snake_case)
-        const projectId = t.project_id !== undefined ? t.project_id : t.projectId
-        const proj = projects.value.find(p => p.id === projectId)
-        // 该项目不是我负责
-        return proj && proj.owner_id !== currentUser.value.id
+        // 只要是分配给我的、且未完成的任务都显示出来（不再局限于别人负责的项目）
+        return Number(assigneeId) === Number(currentUser.value.id) && t.status !== '已完成'
       })
     })
 
@@ -1208,10 +1332,19 @@ export default {
       return result
     })
 
+    const activeTasks = computed(() => {
+      return tasks.value.filter(t => t.status !== '已完成')
+    })
+
     const logFilterTaskId = ref('')
     const filteredLogs = computed(() => {
-      if (!logFilterTaskId.value) return logs.value
-      return logs.value.filter(l => l.task_id === logFilterTaskId.value)
+      // 仅保留未完成任务的进度汇报记录
+      let list = logs.value.filter(l => {
+        const task = tasks.value.find(t => t.id === l.task_id)
+        return !task || task.status !== '已完成'
+      })
+      if (!logFilterTaskId.value) return list
+      return list.filter(l => l.task_id === logFilterTaskId.value)
     })
 
     // ==================== 2. 全局数据装载 (API 加载，出错则自动切换至 Mock 模式) ====================
@@ -1284,7 +1417,7 @@ export default {
       // 匹配负责人名字
       projects.value.forEach(p => {
         const u = users.value.find(user => user.id === p.owner_id)
-        p.ownerName = u ? u.realName : `用户ID:${p.owner_id}`
+        p.ownerName = u ? u.realName : '已注销用户'
       })
       
       tasks.value.forEach(t => {
@@ -1292,7 +1425,7 @@ export default {
         t.projectName = p ? p.name : `项目ID:${t.project_id}`
         
         const u = users.value.find(user => user.id === t.assignee_id)
-        t.assigneeName = u ? u.realName : `用户ID:${t.assignee_id}`
+        t.assigneeName = u ? u.realName : '已注销用户'
       })
 
       logs.value.forEach(l => {
@@ -1300,7 +1433,7 @@ export default {
         l.taskTitle = t ? t.title : `任务ID:${l.task_id}`
         
         const u = users.value.find(user => user.id === l.operator_id)
-        l.operatorName = u ? u.realName : `汇报人ID:${l.operator_id}`
+        l.operatorName = u ? u.realName : '已注销用户'
       })
 
       summaries.value.forEach(s => {
@@ -1313,7 +1446,7 @@ export default {
         }
         
         const u = users.value.find(user => user.id === s.created_by)
-        s.creatorName = u ? u.realName : `用户ID:${s.created_by}`
+        s.creatorName = u ? u.realName : '已注销用户'
       })
     }
 
@@ -1376,16 +1509,29 @@ export default {
     }
 
     const handleDeleteProject = (id) => {
-      ElMessageBox.confirm('确定要删除该项目吗？这不会影响已有任务数据（极速教学精简机制）。', '安全确认', {
+      ElMessageBox.confirm('确定要删除该项目吗？这将会级联删除该项目下的所有任务及进度记录！', '安全确认', {
         confirmButtonText: '确定删除',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(async () => {
         if (isMockMode.value) {
+          // 1. 删除项目
           let list = JSON.parse(localStorage.getItem('fs_projects') || '[]')
           list = list.filter(p => p.id !== id)
           localStorage.setItem('fs_projects', JSON.stringify(list))
-          ElMessage.success('本地模拟删除项目成功')
+
+          // 2. 删除关联任务
+          let localTasks = JSON.parse(localStorage.getItem('fs_tasks') || '[]')
+          const deletedTaskIds = localTasks.filter(t => t.project_id === id).map(t => t.id)
+          localTasks = localTasks.filter(t => t.project_id !== id)
+          localStorage.setItem('fs_tasks', JSON.stringify(localTasks))
+
+          // 3. 删除关联的进度记录
+          let localLogs = JSON.parse(localStorage.getItem('fs_logs') || '[]')
+          localLogs = localLogs.filter(l => !deletedTaskIds.includes(l.task_id))
+          localStorage.setItem('fs_logs', JSON.stringify(localLogs))
+
+          ElMessage.success('本地模拟级联删除项目及关联任务成功')
           loadAllData()
         } else {
           try {
@@ -1625,6 +1771,114 @@ export default {
       }).catch(() => {})
     }
 
+    // ==================== 批量删除功能逻辑 ====================
+    const selectedProjectIds = ref([])
+    const handleProjectSelectionChange = (val) => {
+      selectedProjectIds.value = val.map(item => item.id)
+    }
+
+    const selectedTaskIds = ref([])
+    const handleTaskSelectionChange = (val) => {
+      selectedTaskIds.value = val.map(item => item.id)
+    }
+    const handleKanbanTaskSelect = (taskId, val) => {
+      if (val) {
+        if (!selectedTaskIds.value.includes(taskId)) {
+          selectedTaskIds.value.push(taskId)
+        }
+      } else {
+        selectedTaskIds.value = selectedTaskIds.value.filter(id => id !== taskId)
+      }
+    }
+
+    const handleBatchDeleteProjects = () => {
+      if (selectedProjectIds.value.length === 0) return
+      ElMessageBox.confirm(`确定要删除选中的 ${selectedProjectIds.value.length} 个项目吗？这将级联删除它们下属的所有任务及日志！`, '批量删除确认', {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'danger'
+      }).then(async () => {
+        loading.value = true
+        if (isMockMode.value) {
+          let localProjects = JSON.parse(localStorage.getItem('fs_projects') || '[]')
+          let localTasks = JSON.parse(localStorage.getItem('fs_tasks') || '[]')
+          let localLogs = JSON.parse(localStorage.getItem('fs_logs') || '[]')
+          
+          for (const projId of selectedProjectIds.value) {
+            localProjects = localProjects.filter(p => p.id !== projId)
+            const deletedTaskIds = localTasks.filter(t => t.project_id === projId).map(t => t.id)
+            localTasks = localTasks.filter(t => t.project_id !== projId)
+            localLogs = localLogs.filter(l => !deletedTaskIds.includes(l.task_id))
+          }
+          
+          localStorage.setItem('fs_projects', JSON.stringify(localProjects))
+          localStorage.setItem('fs_tasks', JSON.stringify(localTasks))
+          localStorage.setItem('fs_logs', JSON.stringify(localLogs))
+          
+          selectedProjectIds.value = []
+          ElMessage.success('批量删除项目成功')
+          await loadAllData()
+        } else {
+          try {
+            let successCount = 0
+            for (const projId of selectedProjectIds.value) {
+              const res = await projectApi.deleteProject(projId)
+              if (res.success) successCount++
+            }
+            ElMessage.success(`成功批量删除 ${successCount} 个项目`)
+            selectedProjectIds.value = []
+            await loadAllData()
+          } catch (e) {
+            console.error(e)
+            ElMessage.error('批量删除失败')
+          }
+        }
+        loading.value = false
+      }).catch(() => {})
+    }
+
+    const handleBatchDeleteTasks = () => {
+      if (selectedTaskIds.value.length === 0) return
+      ElMessageBox.confirm(`确定要批量删除选中的 ${selectedTaskIds.value.length} 个任务吗？这将会同时清理它们的进度反馈日志！`, '批量删除任务确认', {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'danger'
+      }).then(async () => {
+        loading.value = true
+        if (isMockMode.value) {
+          let localTasks = JSON.parse(localStorage.getItem('fs_tasks') || '[]')
+          let localLogs = JSON.parse(localStorage.getItem('fs_logs') || '[]')
+          
+          for (const taskId of selectedTaskIds.value) {
+            localTasks = localTasks.filter(t => t.id !== taskId)
+            localLogs = localLogs.filter(l => l.task_id !== taskId)
+          }
+          
+          localStorage.setItem('fs_tasks', JSON.stringify(localTasks))
+          localStorage.setItem('fs_logs', JSON.stringify(localLogs))
+          
+          selectedTaskIds.value = []
+          ElMessage.success('批量删除任务成功')
+          await loadAllData()
+        } else {
+          try {
+            let successCount = 0
+            for (const taskId of selectedTaskIds.value) {
+              const res = await taskApi.deleteTask(taskId)
+              if (res.success) successCount++
+            }
+            ElMessage.success(`成功批量删除 ${successCount} 个任务`)
+            selectedTaskIds.value = []
+            await loadAllData()
+          } catch (e) {
+            console.error(e)
+            ElMessage.error('批量删除任务失败')
+          }
+        }
+        loading.value = false
+      }).catch(() => {})
+    }
+
     // --- D. 单任务 AI 建议 ---
     const aiDrawerVisible = ref(false)
     const aiSuggestionLoading = ref(false)
@@ -1661,45 +1915,124 @@ export default {
 
     // --- E. 进度跟踪反馈 ---
     const logDialogVisible = ref(false)
+    const logDialogTitle = ref('新增进度跟踪反馈')
     const logFormRef = ref(null)
-    const logForm = ref({ task_id: null, progress_percent: 0, content: '', operator_id: null })
+    const logForm = ref({ id: null, task_id: null, progress_percent: 0, content: '', operator_id: null })
     const logFormRules = {
       task_id: [{ required: true, message: '请选择反馈的任务', trigger: 'change' }],
       content: [{ required: true, message: '请输入进展说明内容', trigger: 'blur' }]
     }
 
     const openAddLogDialog = (taskId) => {
+      logDialogTitle.value = '新增进度跟踪反馈'
       logForm.value = {
+        id: null,
         task_id: taskId || null,
-        progress_percent: taskId ? (tasks.value.find(t => t.id === taskId)?.progress_percent || 50) : 0,
+        progress_percent: taskId ? (tasks.value.find(t => t.id === taskId)?.progress_percent || 0) : 0,
         content: '',
         operator_id: currentUser.value.id
       }
       logDialogVisible.value = true
     }
 
+    const openEditLogDialog = (row) => {
+      logDialogTitle.value = '编辑进度反馈'
+      logForm.value = {
+        id: row.id,
+        task_id: row.task_id || row.taskId,
+        progress_percent: row.progress_percent !== undefined ? row.progress_percent : row.progressPercent,
+        content: row.content,
+        operator_id: row.operator_id || row.operatorId
+      }
+      logDialogVisible.value = true
+    }
+
+    const handleDeleteLog = (id) => {
+      ElMessageBox.confirm('确定要删除该进度记录吗？（这可能需要重新计算该任务的进度）', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        loading.value = true
+        if (isMockMode.value) {
+          let logList = JSON.parse(localStorage.getItem('fs_logs') || '[]')
+          const found = logList.find(l => l.id === id)
+          if (found) {
+            const taskId = found.task_id
+            logList = logList.filter(l => l.id !== id)
+            localStorage.setItem('fs_logs', JSON.stringify(logList))
+            
+            // 重新计算任务的进度
+            const remainingLogs = logList.filter(l => l.task_id === taskId).sort((a, b) => b.id - a.id)
+            let latestPercent = 0
+            if (remainingLogs.length > 0) {
+              latestPercent = remainingLogs[0].progress_percent
+            }
+            
+            let taskList = JSON.parse(localStorage.getItem('fs_tasks') || '[]')
+            const tIndex = taskList.findIndex(t => t.id === taskId)
+            if (tIndex !== -1) {
+              taskList[tIndex].progress_percent = latestPercent
+              if (latestPercent === 100) {
+                taskList[tIndex].status = '已完成'
+              } else if (latestPercent > 0) {
+                taskList[tIndex].status = '进行中'
+              } else {
+                taskList[tIndex].status = '未开始'
+              }
+            }
+            localStorage.setItem('fs_tasks', JSON.stringify(taskList))
+          }
+          ElMessage.success('本地模拟删除进度记录成功')
+          loadAllData()
+        } else {
+          try {
+            const res = await taskLogApi.deleteTaskLog(id)
+            if (res.success) {
+              ElMessage.success('删除进度记录成功')
+              loadAllData()
+            }
+          } catch (e) {
+            console.error(e)
+          }
+        }
+        loading.value = false
+      }).catch(() => {})
+    }
+
     const handleSaveLog = () => {
       logFormRef.value.validate(async (valid) => {
         if (!valid) return
         
+        loading.value = true
         if (isMockMode.value) {
           let logList = JSON.parse(localStorage.getItem('fs_logs') || '[]')
-          const newId = logList.length > 0 ? Math.max(...logList.map(l => l.id)) + 1 : 1
           
-          const now = new Date()
-          const createTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
-          
-          logList.push({
-            id: newId,
-            task_id: logForm.value.task_id,
-            progress_percent: logForm.value.progress_percent,
-            content: logForm.value.content,
-            operator_id: currentUser.value.id,
-            create_time: createTime
-          })
+          if (logForm.value.id) {
+            // 编辑修改
+            const idx = logList.findIndex(l => l.id === logForm.value.id)
+            if (idx !== -1) {
+              logList[idx].task_id = logForm.value.task_id
+              logList[idx].progress_percent = logForm.value.progress_percent
+              logList[idx].content = logForm.value.content
+            }
+          } else {
+            // 新增
+            const newId = logList.length > 0 ? Math.max(...logList.map(l => l.id)) + 1 : 1
+            const now = new Date()
+            const createTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+            logList.push({
+              id: newId,
+              task_id: logForm.value.task_id,
+              progress_percent: logForm.value.progress_percent,
+              content: logForm.value.content,
+              operator_id: currentUser.value.id,
+              create_time: createTime
+            })
+          }
           localStorage.setItem('fs_logs', JSON.stringify(logList))
           
-          // 顺便修改关联任务的进度百分比和状态
+          // 重新同步修改对应任务的进度百分比和状态
           let taskList = JSON.parse(localStorage.getItem('fs_tasks') || '[]')
           const tIndex = taskList.findIndex(t => t.id === logForm.value.task_id)
           if (tIndex !== -1) {
@@ -1708,30 +2041,39 @@ export default {
               taskList[tIndex].status = '已完成'
             } else if (logForm.value.progress_percent > 0) {
               taskList[tIndex].status = '进行中'
+            } else {
+              taskList[tIndex].status = '未开始'
             }
           }
           localStorage.setItem('fs_tasks', JSON.stringify(taskList))
 
-          ElMessage.success('本地模拟进度汇报成功')
+          ElMessage.success(logForm.value.id ? '进度更新成功' : '新增进度汇报成功')
           logDialogVisible.value = false
           loadAllData()
         } else {
           try {
-            const res = await taskLogApi.addTaskLog(logForm.value)
+            let res
+            if (logForm.value.id) {
+              res = await taskLogApi.updateTaskLog(logForm.value)
+            } else {
+              res = await taskLogApi.addTaskLog(logForm.value)
+            }
             if (res.success) {
-              ElMessage.success('汇报提交成功')
+              ElMessage.success(logForm.value.id ? '进度记录已更新' : '汇报提交成功')
               logDialogVisible.value = false
               loadAllData()
             }
           } catch (e) { console.error(e) }
         }
+        loading.value = false
       })
     }
 
     // --- F. 总结中心管理 ---
+    const summaryDialogTitle = ref('新建项目总结')
     const summaryDialogVisible = ref(false)
     const summaryFormRef = ref(null)
-    const summaryForm = ref({ project_id: '', task_id: null, summary_type: '阶段总结', content: '', created_by: null })
+    const summaryForm = ref({ id: null, project_id: '', task_id: null, summary_type: '阶段总结', content: '', created_by: null })
     const summaryFormRules = {
       project_id: [{ required: true, message: '请选择总结项目', trigger: 'change' }],
       summary_type: [{ required: true, message: '请选择总结类型', trigger: 'change' }],
@@ -1748,7 +2090,9 @@ export default {
     }
 
     const openAddSummaryDialog = () => {
+      summaryDialogTitle.value = '新建项目总结'
       summaryForm.value = {
+        id: null,
         project_id: '',
         task_id: null,
         summary_type: '阶段总结',
@@ -1759,36 +2103,95 @@ export default {
       summaryDialogVisible.value = true
     }
 
+    const openEditSummaryDialog = (row) => {
+      summaryDialogTitle.value = '编辑项目总结'
+      const projId = row.project_id !== undefined ? row.project_id : row.projectId
+      if (projId) {
+        currentProjectTasks.value = tasks.value.filter(t => t.project_id === projId)
+      } else {
+        currentProjectTasks.value = []
+      }
+      summaryForm.value = {
+        id: row.id,
+        project_id: projId,
+        task_id: row.task_id !== undefined ? row.task_id : row.taskId,
+        summary_type: row.summary_type !== undefined ? row.summary_type : row.summaryType,
+        content: row.content,
+        created_by: row.created_by !== undefined ? row.created_by : row.createdBy
+      }
+      summaryDialogVisible.value = true
+    }
+
+    const handleDeleteSummary = (id) => {
+      ElMessageBox.confirm('确定要删除这条项目总结报告吗？', '安全提示', {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        loading.value = true
+        if (isMockMode.value) {
+          let list = JSON.parse(localStorage.getItem('fs_summaries') || '[]')
+          list = list.filter(s => s.id !== id)
+          localStorage.setItem('fs_summaries', JSON.stringify(list))
+          ElMessage.success('本地模拟删除总结成功')
+          loadAllData()
+        } else {
+          try {
+            const res = await summaryApi.deleteSummary(id)
+            if (res.success) {
+              ElMessage.success('总结报告已删除')
+              loadAllData()
+            }
+          } catch (e) { console.error(e) }
+        }
+        loading.value = false
+      }).catch(() => {})
+    }
+
     const handleSaveSummary = () => {
       summaryFormRef.value.validate(async (valid) => {
         if (!valid) return
         
         if (isMockMode.value) {
           let sumList = JSON.parse(localStorage.getItem('fs_summaries') || '[]')
-          const newId = sumList.length > 0 ? Math.max(...sumList.map(s => s.id)) + 1 : 1
-          
-          const now = new Date()
-          const createTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+          if (summaryForm.value.id) {
+            const idx = sumList.findIndex(s => s.id === summaryForm.value.id)
+            if (idx !== -1) {
+              sumList[idx].project_id = summaryForm.value.project_id
+              sumList[idx].task_id = summaryForm.value.task_id
+              sumList[idx].summary_type = summaryForm.value.summary_type
+              sumList[idx].content = summaryForm.value.content
+            }
+            ElMessage.success('本地模拟更新总结成功')
+          } else {
+            const newId = sumList.length > 0 ? Math.max(...sumList.map(s => s.id)) + 1 : 1
+            const now = new Date()
+            const createTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
 
-          sumList.push({
-            id: newId,
-            project_id: summaryForm.value.project_id,
-            task_id: summaryForm.value.task_id,
-            summary_type: summaryForm.value.summary_type,
-            content: summaryForm.value.content,
-            created_by: currentUser.value.id,
-            create_time: createTime
-          })
+            sumList.push({
+              id: newId,
+              project_id: summaryForm.value.project_id,
+              task_id: summaryForm.value.task_id,
+              summary_type: summaryForm.value.summary_type,
+              content: summaryForm.value.content,
+              created_by: currentUser.value.id,
+              create_time: createTime
+            })
+            ElMessage.success('本地模拟提交总结成功')
+          }
           localStorage.setItem('fs_summaries', JSON.stringify(sumList))
-          
-          ElMessage.success('本地模拟提交总结成功')
           summaryDialogVisible.value = false
           loadAllData()
         } else {
           try {
-            const res = await summaryApi.addSummary(summaryForm.value)
+            let res
+            if (summaryForm.value.id) {
+              res = await summaryApi.updateSummary(summaryForm.value)
+            } else {
+              res = await summaryApi.addSummary(summaryForm.value)
+            }
             if (res.success) {
-              ElMessage.success('提交项目总结成功')
+              ElMessage.success(summaryForm.value.id ? '更新项目总结成功' : '提交项目总结成功')
               summaryDialogVisible.value = false
               loadAllData()
             }
@@ -1842,6 +2245,41 @@ export default {
     // ==================== 4. 其他辅助操作（左侧菜单、高亮标签等） ====================
     const handleMenuSelect = (index) => {
       activeMenu.value = index
+    }
+
+    const handleUnregisterAccount = () => {
+      ElMessageBox.confirm('您确定要注销并永久删除当前登录的账号吗？此操作不可恢复，将导致您的登录凭证失效并退出系统！', '账号注销警告', {
+        confirmButtonText: '确定注销',
+        cancelButtonText: '取消',
+        type: 'danger'
+      }).then(async () => {
+        loading.value = true
+        if (isMockMode.value) {
+          const userId = currentUser.value.id
+          let localUsers = JSON.parse(localStorage.getItem('fs_users') || '[]')
+          localUsers = localUsers.filter(u => u.id !== userId)
+          localStorage.setItem('fs_users', JSON.stringify(localUsers))
+          
+          ElMessage.success('本地模拟账号注销成功')
+          sessionStorage.clear()
+          router.push('/login')
+        } else {
+          try {
+            const res = await userApi.deleteUser(currentUser.value.id)
+            if (res.success) {
+              ElMessage.success(res.message || '账号注销成功')
+              sessionStorage.clear()
+              router.push('/login')
+            } else {
+              ElMessage.error(res.message || '注销失败')
+            }
+          } catch (e) {
+            console.error(e)
+            ElMessage.error('注销账号异常')
+          }
+        }
+        loading.value = false
+      }).catch(() => {})
     }
 
     const handleLogout = () => {
@@ -1916,12 +2354,27 @@ export default {
       filteredTasks,
       logFilterTaskId,
       filteredLogs,
+      activeTasks,
+      logDialogTitle,
+      openEditLogDialog,
+      handleDeleteLog,
+      summaryDialogTitle,
+      openEditSummaryDialog,
+      handleDeleteSummary,
+      selectedProjectIds,
+      handleProjectSelectionChange,
+      selectedTaskIds,
+      handleTaskSelectionChange,
+      handleKanbanTaskSelect,
+      handleBatchDeleteProjects,
+      handleBatchDeleteTasks,
       
       // 样式方法
       getStatusTag,
       getPriorityTag,
       handleMenuSelect,
       handleLogout,
+      handleUnregisterAccount,
 
       // 项目管理弹窗与事件
       projectDialogVisible,

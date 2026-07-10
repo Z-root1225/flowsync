@@ -38,4 +38,26 @@ public class TaskSummaryController {
             return ApiResponse.error("提交总结失败");
         }
     }
+
+    // 修改总结
+    @PutMapping
+    public ApiResponse<String> updateSummary(@RequestBody TaskSummary summary) {
+        boolean success = taskSummaryService.updateById(summary);
+        if (success) {
+            return ApiResponse.success("总结报告更新成功", "Summary updated successfully");
+        } else {
+            return ApiResponse.error("更新总结失败");
+        }
+    }
+
+    // 删除总结
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> deleteSummary(@PathVariable("id") Long id) {
+        boolean success = taskSummaryService.removeById(id);
+        if (success) {
+            return ApiResponse.success("总结报告已删除", "Summary deleted successfully");
+        } else {
+            return ApiResponse.error("删除总结失败");
+        }
+    }
 }

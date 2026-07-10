@@ -7,6 +7,8 @@ import hgc.flowsyncapi.mapper.TaskInfoMapper;
 import hgc.flowsyncapi.service.TaskInfoService;
 import org.springframework.stereotype.Service;
 import hgc.flowsyncapi.service.ProjectInfoService;
+import hgc.flowsyncapi.entity.TaskLog;
+import hgc.flowsyncapi.mapper.TaskLogMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,11 +16,15 @@ import java.io.Serializable;
 import java.util.List;
 
 @Service
+@SuppressWarnings("all")
 public class TaskInfoServiceImpl extends ServiceImpl<TaskInfoMapper, TaskInfo> implements TaskInfoService {
 
     @Autowired
     @Lazy
     private ProjectInfoService projectInfoService;
+
+    @Autowired
+    private TaskLogMapper taskLogMapper;
 
     @Override
     public List<TaskInfo> getTasks(Long projectId) {
@@ -64,7 +70,16 @@ public class TaskInfoServiceImpl extends ServiceImpl<TaskInfoMapper, TaskInfo> i
     @Transactional(rollbackFor = Exception.class)
     public boolean removeById(Serializable id) {
         TaskInfo task = this.getById(id);
+        
+        // 1. 删除该任务关联的进度反馈日志
+        LambdaQueryWrapper<TaskLog> logWrapper = new LambdaQueryWrapper<>();
+        logWrapper.eq(TaskLog::getTaskId, id);
+        taskLogMapper.delete(logWrapper);
+
+        // 2. 删除任务本身
         boolean success = super.removeById(id);
+        
+        // 3. 联动更新父项目状态
         if (success && task != null && task.getProjectId() != null) {
             projectInfoService.updateProjectStatus(task.getProjectId());
         }

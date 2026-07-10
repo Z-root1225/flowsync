@@ -43,4 +43,26 @@ public class TaskLogController {
             return ApiResponse.error("保存进度记录失败");
         }
     }
+
+    // 修改进度记录
+    @PutMapping
+    public ApiResponse<String> updateTaskLog(@RequestBody TaskLog log) {
+        boolean success = taskLogService.updateById(log);
+        if (success) {
+            return ApiResponse.success("进度记录更新成功", "Progress log updated successfully");
+        } else {
+            return ApiResponse.error("更新进度记录失败");
+        }
+    }
+
+    // 删除进度记录
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> deleteTaskLog(@PathVariable("id") Long id) {
+        boolean success = taskLogService.removeById(id);
+        if (success) {
+            return ApiResponse.success("进度记录已删除", "Progress log deleted successfully");
+        } else {
+            return ApiResponse.error("删除进度记录失败");
+        }
+    }
 }
